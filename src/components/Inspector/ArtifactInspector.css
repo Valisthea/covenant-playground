@@ -1,0 +1,314 @@
+/* Artifact Inspector (Sprint 20) */
+
+.ai-pane {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--paper);
+  border-left: 1px solid var(--rule-faint);
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* ── Empty state ────────────────────────────────────────────────────────── */
+
+.ai-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 40px 28px;
+  color: var(--ink-mute);
+  gap: 10px;
+}
+
+.ai-empty strong {
+  font-family: var(--font-serif);
+  font-size: 18px;
+  color: var(--ink);
+}
+
+.ai-empty span {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.5;
+  max-width: 320px;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+
+.ai-header {
+  padding: 12px 16px 10px;
+  border-bottom: 1px solid var(--rule-faint);
+  background: var(--paper);
+}
+
+.ai-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.ai-title {
+  font-family: var(--font-serif);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink);
+  margin: 0;
+}
+
+.ai-export {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  padding: 4px 9px;
+  background: transparent;
+  color: var(--ink-mute);
+  border: 1px solid var(--rule-faint);
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 120ms;
+}
+
+.ai-export:hover:not(:disabled) {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.ai-export:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── Selector tabs ──────────────────────────────────────────────────────── */
+
+.ai-selector {
+  display: flex;
+  gap: 4px;
+}
+
+.ai-selector-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 11px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  border: 1px solid var(--rule-faint);
+  background: transparent;
+  color: var(--ink-mute);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 120ms;
+}
+
+.ai-selector-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.ai-selector-btn.is-active {
+  background: var(--accent);
+  color: var(--paper-pure);
+  border-color: var(--accent);
+}
+
+.ai-selector-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ── Stats ─────────────────────────────────────────────────────────────── */
+
+.ai-stats {
+  display: flex;
+  gap: 6px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--rule-faint);
+  flex-wrap: wrap;
+  background: var(--paper-alt);
+}
+
+.ai-stat {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 9px;
+  background: var(--paper);
+  border: 1px solid var(--rule-faint);
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  min-width: 64px;
+}
+
+.ai-stat-muted {
+  color: var(--ink-faint);
+  font-size: 11px;
+  border: none;
+  background: transparent;
+  padding: 0;
+}
+
+.ai-stat-label {
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.ai-stat-value {
+  font-size: 12px;
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.ai-stat-accent .ai-stat-value {
+  color: var(--accent);
+}
+
+.ai-stat-fhe .ai-stat-value {
+  color: #c026d3; /* FHE family color */
+}
+
+.ai-stat-zk .ai-stat-value {
+  color: #0ea5e9; /* ZK family color */
+}
+
+/* ── Annotation toggles row ─────────────────────────────────────────────── */
+
+.ai-anno-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 16px;
+  border-bottom: 1px solid var(--rule-faint);
+  gap: 10px;
+}
+
+.ai-anno-controls {
+  display: flex;
+  gap: 12px;
+}
+
+.ai-anno-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--ink-mute);
+  cursor: pointer;
+  user-select: none;
+}
+
+.ai-anno-label input {
+  accent-color: var(--accent);
+  margin: 0;
+}
+
+.ai-anno-label:hover {
+  color: var(--ink);
+}
+
+.ai-synthetic-badge {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  background: var(--paper-alt);
+  color: var(--warn);
+  border: 1px solid var(--rule-faint);
+  border-radius: 2px;
+  cursor: help;
+}
+
+/* ── Editor wrapper ─────────────────────────────────────────────────────── */
+
+.ai-editor-wrap {
+  flex: 1;
+  min-height: 0;
+}
+
+/* ── Monaco decoration classes (set on createDecorationsCollection) ────── */
+
+.ai-line-highlight {
+  background: color-mix(in srgb, var(--accent) 12%, transparent) !important;
+  border-left: 2px solid var(--accent) !important;
+}
+
+.ai-margin-highlight {
+  background: var(--accent) !important;
+}
+
+/* Inline source-editor annotations (Sprint 20.3) */
+
+.ai-gas-anno {
+  color: var(--ink-faint) !important;
+  font-style: italic;
+  font-size: 10px;
+  margin-left: 18px;
+  user-select: none;
+  font-family: var(--font-mono) !important;
+}
+
+.ai-noise-anno {
+  color: #c026d3 !important;
+  font-size: 10px;
+  margin-left: 6px;
+  user-select: none;
+  font-family: var(--font-mono) !important;
+}
+
+.ai-noise-anno-warn {
+  color: var(--warn) !important;
+}
+
+.ai-noise-anno-danger {
+  color: var(--danger) !important;
+}
+
+.ai-constraint-anno {
+  color: #0ea5e9 !important;
+  font-size: 10px;
+  margin-left: 6px;
+  user-select: none;
+  font-family: var(--font-mono) !important;
+}
+
+/* ── Hover hint footer ──────────────────────────────────────────────────── */
+
+.ai-hover-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-top: 1px solid var(--rule-faint);
+  background: var(--paper-alt);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-mute);
+}
+
+.ai-hover-hint-label {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.ai-hover-hint-count {
+  color: var(--ink);
+}
+
+.ai-hover-hint-ops {
+  color: var(--ink-mute);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}

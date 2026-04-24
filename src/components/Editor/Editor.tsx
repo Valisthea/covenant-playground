@@ -4,6 +4,7 @@ import type { editor } from 'monaco-editor';
 import { registerCovenantLanguage } from './CovenantLang';
 import { useStore } from '../../lib/store';
 import { getEffective, getTheme } from '../../lib/theme';
+import { useSourceAnnotations } from './useSourceAnnotations';
 
 export function Editor() {
   const source = useStore((s) => s.source);
@@ -48,6 +49,23 @@ export function Editor() {
     ed.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
       void useStore.getState().compile();
     });
+
+    // ── Inspector hover sync (Sprint 20) ─────────────────────────────────
+    // Push the line under the cursor into the store; the Inspector pane
+    // subscribes and highlights matching IR instructions. Debounced so
+    // raw onMouseMove (fires per pixel) doesn't thrash React renders.
+    let hoverDebounce: ReturnType<typeof setTimeout> | null = null;
+    ed.onMouseMove((e) => {
+      const line = e.target.position?.lineNumber ?? null;
+      if (hoverDebounce) clearTimeout(hoverDebounce);
+      hoverDebounce = setTimeout(() => {
+        useStore.getState().setHoveredSourceLine(line);
+      }, 40);
+    });
+    ed.onDidBlurEditorWidget(() => {
+      if (hoverDebounce) clearTimeout(hoverDebounce);
+      useStore.getState().setHoveredSourceLine(null);
+    });
   }, []);
 
   // Sync diagnostics into Monaco markers whenever they change.
@@ -85,6 +103,10 @@ export function Editor() {
 
     monaco.editor.setModelMarkers(model, 'covenant-compiler', markers);
   }, [diagnostics]);
+
+  // Inline gas/noise/constraint annotations after each source line —
+  // only active when the user is in Inspect layout.
+  useSourceAnnotations(editorRef, monacoRef);
 
   // Subscribe to the <html data-theme> attribute so the editor theme
   // flips live when the user toggles dark mode from the Header.

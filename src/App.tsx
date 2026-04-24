@@ -3,6 +3,7 @@ import { Routes, Route, useSearchParams, useNavigate, Link } from 'react-router-
 import { Header } from './components/Layout/Header';
 import { Editor } from './components/Editor/Editor';
 import { Output } from './components/Output/Output';
+import { ArtifactInspector } from './components/Inspector/ArtifactInspector';
 import { ExamplesGallery } from './components/ExamplesGallery/ExamplesGallery';
 import { ShareDialog } from './components/Share/ShareDialog';
 import { OnboardingTour } from './components/Onboarding/OnboardingTour';
@@ -66,6 +67,37 @@ function Playground() {
 
   const loadSource = useStore((s) => s.loadSource);
   const compile = useStore((s) => s.compile);
+  const layoutMode = useStore((s) => s.layoutMode);
+  const setLayoutMode = useStore((s) => s.setLayoutMode);
+
+  // ── Layout mode ↔ URL sync ────────────────────────────────────────────
+  // On mount, honor ?layout=inspect. Then keep the URL in sync as the
+  // user toggles via the header (without spamming history entries).
+  useEffect(() => {
+    const layout = params.get('layout');
+    if (layout === 'inspect' && layoutMode !== 'inspect') {
+      setLayoutMode('inspect');
+    } else if (layout === 'simple' && layoutMode !== 'simple') {
+      setLayoutMode('simple');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const next = new URLSearchParams(params);
+    if (layoutMode === 'inspect') {
+      if (next.get('layout') !== 'inspect') {
+        next.set('layout', 'inspect');
+        setParams(next, { replace: true });
+      }
+    } else {
+      if (next.has('layout')) {
+        next.delete('layout');
+        setParams(next, { replace: true });
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layoutMode]);
 
   // One-shot init: load from ?example=, then ?code=, then compile the default.
   useEffect(() => {
@@ -116,7 +148,7 @@ function Playground() {
 
       <TourBanner />
 
-      <div className="app-body">
+      <div className={`app-body ${layoutMode === 'inspect' ? 'is-inspect' : ''}`}>
         <div className="app-editor">
           <div className="mobile-notice">
             <strong>Desktop-only editing</strong>
@@ -126,6 +158,12 @@ function Playground() {
           </div>
           <Editor />
         </div>
+
+        {layoutMode === 'inspect' && (
+          <div className="app-inspector">
+            <ArtifactInspector />
+          </div>
+        )}
 
         <div className="app-side">
           <Output />

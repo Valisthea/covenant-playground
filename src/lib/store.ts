@@ -49,6 +49,24 @@ interface State {
   walletError: string | null;
   isConnectingWallet: boolean;
 
+  // --- Inspector (Sprint 20) ---
+  /** 'simple' = editor + output, 'inspect' = editor + inspector + output. */
+  layoutMode: 'simple' | 'inspect';
+  /** Currently hovered source line (1-indexed), null when no hover. */
+  hoveredSourceLine: number | null;
+  /** Currently hovered IR instruction index, null when no hover. */
+  hoveredIrIndex: number | null;
+  /** Toggles for inline source annotations (gas/noise/constraints). */
+  showGasAnnotations: boolean;
+  showNoiseAnnotations: boolean;
+  showConstraintAnnotations: boolean;
+  setLayoutMode: (m: 'simple' | 'inspect') => void;
+  setHoveredSourceLine: (l: number | null) => void;
+  setHoveredIrIndex: (i: number | null) => void;
+  setShowGasAnnotations: (b: boolean) => void;
+  setShowNoiseAnnotations: (b: boolean) => void;
+  setShowConstraintAnnotations: (b: boolean) => void;
+
   // --- Source actions ---
   setSource: (src: string) => void;
   loadSource: (src: string, fileName?: string) => void;
@@ -118,6 +136,21 @@ export const useStore = create<State>((set, get) => ({
   wallet: null,
   walletError: null,
   isConnectingWallet: false,
+
+  // Inspector defaults
+  layoutMode: 'simple',
+  hoveredSourceLine: null,
+  hoveredIrIndex: null,
+  showGasAnnotations: true,
+  showNoiseAnnotations: true,
+  showConstraintAnnotations: true,
+  setLayoutMode: (layoutMode) => set({ layoutMode }),
+  setHoveredSourceLine: (hoveredSourceLine) => set({ hoveredSourceLine }),
+  setHoveredIrIndex: (hoveredIrIndex) => set({ hoveredIrIndex }),
+  setShowGasAnnotations: (showGasAnnotations) => set({ showGasAnnotations }),
+  setShowNoiseAnnotations: (showNoiseAnnotations) => set({ showNoiseAnnotations }),
+  setShowConstraintAnnotations: (showConstraintAnnotations) =>
+    set({ showConstraintAnnotations }),
 
   setSource: (source) => {
     const { currentFile, files } = get();

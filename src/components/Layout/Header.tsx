@@ -1,5 +1,6 @@
 import { useStore } from '../../lib/store';
 import { ThemeToggle } from './ThemeToggle';
+import { LayoutToggle } from './LayoutToggle';
 
 interface Props {
   onOpenGallery: () => void;
@@ -41,6 +42,7 @@ export function Header({ onOpenGallery, onOpenShare }: Props) {
       <div className="pg-header-spacer" />
 
       <div className="pg-header-actions">
+        <LayoutToggle />
         <button className="pg-btn" onClick={onOpenGallery} type="button">
           Examples (25)
         </button>

@@ -31,6 +31,9 @@
 
 export const USE_STUB_COMPILER = true;
 
+import { synthesizeSourceMap, type SourceMap } from './source-map';
+export type { SourceMap, InstructionMapping, SourceMapStats } from './source-map';
+
 export interface Diagnostic {
   severity: 'error' | 'warning' | 'info';
   message: string;
@@ -72,6 +75,14 @@ export interface CompileResult {
   bytecode: string | null;
   abi: unknown[] | null;
   ir: string | null;
+
+  /**
+   * Source map binding instructions back to their source location, with
+   * gas/noise/constraint annotations. Currently synthesized on the JS side
+   * (see `source-map.ts`); will be replaced by the real compiler output
+   * once Sprint 20 Phase 20.1 lands in `covenant-wasm-bindings`.
+   */
+  sourceMap: SourceMap | null;
 }
 
 interface WasmBinding {
@@ -168,6 +179,8 @@ function runRealCompile(source: string, started: number): CompileResult {
       bytecode: null,
       abi: null,
       ir: null,
+      // Until the real binding emits source maps we synthesize from source
+      sourceMap: raw.ok ? synthesizeSourceMap(source) : null,
     };
   } catch (e) {
     return {
@@ -187,6 +200,7 @@ function runRealCompile(source: string, started: number): CompileResult {
       bytecode: null,
       abi: null,
       ir: null,
+      sourceMap: null,
     };
   }
 }
@@ -216,6 +230,7 @@ function runStubCompile(source: string, started: number): CompileResult {
       bytecode: null,
       abi: null,
       ir: null,
+      sourceMap: null,
     };
   }
 
@@ -252,6 +267,7 @@ function runStubCompile(source: string, started: number): CompileResult {
     bytecode,
     abi: synthesizeAbi(kind, source),
     ir: synthesizeIr(kind, name, source),
+    sourceMap: synthesizeSourceMap(source),
   };
 }
 

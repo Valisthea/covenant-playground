@@ -63,6 +63,91 @@ body {
   background: var(--paper-warm);
 }
 
+/* ---------- 3-pane Inspect layout (Sprint 20) ---------- */
+
+.app-body.is-inspect {
+  /* editor | inspector | output */
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 1fr) 380px;
+}
+
+.app-inspector {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  border-right: 1px solid var(--rule-faint);
+}
+
+@media (max-width: 1280px) {
+  .app-body.is-inspect {
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 1fr) 340px;
+  }
+}
+
+@media (max-width: 1024px) {
+  /* Collapse to simple 2-pane look on smaller screens; the toggle
+   * itself hides via the .pg-layout-toggle media query below. */
+  .app-body.is-inspect {
+    grid-template-columns: 1fr 380px;
+  }
+  .app-inspector {
+    display: none;
+  }
+}
+
+/* ---------- Layout toggle (in header) ---------- */
+
+.pg-layout-toggle {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-right: 4px;
+}
+
+.pg-layout-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  font-family: var(--font-mono);
+  font-size: 8pt;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: transparent;
+  color: var(--ink-soft);
+  border: none;
+  border-right: 1px solid var(--rule);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.pg-layout-btn:last-child {
+  border-right: none;
+}
+
+.pg-layout-btn:hover:not(:disabled):not(.is-active) {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+
+.pg-layout-btn.is-active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.pg-layout-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+@media (max-width: 1024px) {
+  .pg-layout-toggle {
+    display: none;
+  }
+}
+
 /* ---------- Header ---------- */
 
 .pg-header {
