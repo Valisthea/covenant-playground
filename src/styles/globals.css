@@ -215,8 +215,12 @@ body {
   display: flex;
   background: var(--paper-alt);
   border-bottom: 1px solid var(--rule-faint);
-  padding: 0 8px;
+  padding: 0 4px;
+  overflow-x: auto;
+  /* hide scrollbar — tabs should fit, but this is a graceful safety net */
+  scrollbar-width: none;
 }
+.output-tabs::-webkit-scrollbar { display: none; }
 
 .output-tabs button {
   font-family: var(--font-mono);
@@ -224,13 +228,15 @@ body {
   color: var(--ink-mute);
   background: transparent;
   border: none;
-  padding: 10px 14px;
+  padding: 10px 9px;
   cursor: pointer;
   border-bottom: 2px solid transparent;
   display: flex;
   align-items: center;
-  gap: 6px;
-  letter-spacing: 0.04em;
+  gap: 5px;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .output-tabs button.active {
