@@ -5,6 +5,7 @@ import { Editor } from './components/Editor/Editor';
 import { Output } from './components/Output/Output';
 import { ExamplesGallery } from './components/ExamplesGallery/ExamplesGallery';
 import { ShareDialog } from './components/Share/ShareDialog';
+import { OnboardingTour } from './components/Onboarding/OnboardingTour';
 import { useStore } from './lib/store';
 import { parseShareUrl } from './lib/share';
 
@@ -60,6 +61,7 @@ export default function App() {
         <ExamplesGallery onClose={() => setGalleryOpen(false)} />
       )}
       {shareOpen && <ShareDialog onClose={() => setShareOpen(false)} />}
+      <OnboardingTour />
     </div>
   );
 }

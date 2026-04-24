@@ -1726,3 +1726,132 @@ body {
   font-style: italic;
 }
 
+/* =============================================================
+ * Tier 4 · Onboarding tour + theme toggle
+ * ============================================================= */
+
+.tour-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 26, 26, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  padding: 24px;
+  animation: tour-fade 0.2s ease-out;
+}
+
+[data-theme='dark'] .tour-overlay {
+  background: rgba(0, 0, 0, 0.65);
+}
+
+@keyframes tour-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.tour-card {
+  position: relative;
+  background: var(--paper);
+  color: var(--ink);
+  max-width: 540px;
+  width: 100%;
+  border: 1px solid var(--rule);
+  box-shadow: 0 28px 64px rgba(26, 26, 26, 0.25);
+  padding: 32px 32px 20px;
+}
+
+.tour-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  background: transparent;
+  border: none;
+  font-family: var(--font-mono);
+  font-size: 18pt;
+  line-height: 1;
+  color: var(--ink-faint);
+  cursor: pointer;
+  padding: 4px 10px;
+}
+
+.tour-close:hover {
+  color: var(--ink);
+}
+
+.tour-badge {
+  font-family: var(--font-mono);
+  font-size: 7.5pt;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+
+.tour-title {
+  font-family: var(--font-serif);
+  font-size: 22pt;
+  line-height: 1.2;
+  font-weight: 400;
+  margin: 0 0 12px;
+  color: var(--ink);
+}
+
+.tour-body {
+  font-family: var(--font-serif);
+  font-size: 11pt;
+  line-height: 1.55;
+  color: var(--ink-mute);
+  margin: 0 0 24px;
+}
+
+.tour-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--rule-faint);
+}
+
+.tour-dots {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.tour-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--rule);
+  transition: background 0.15s;
+}
+
+.tour-dot--active {
+  background: var(--accent);
+}
+
+.tour-actions {
+  display: flex;
+  gap: 6px;
+}
+
+/* ---------- Theme toggle (icon-only button) ---------- */
+
+.pg-btn--icon {
+  padding: 6px 9px;
+  line-height: 0;
+  color: var(--ink-mute);
+}
+
+.pg-btn--icon .theme-icon {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+.pg-btn--icon:hover {
+  color: var(--accent);
+}
+

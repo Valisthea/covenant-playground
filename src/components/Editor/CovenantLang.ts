@@ -301,4 +301,47 @@ export function registerCovenantLanguage(monaco: Monaco): void {
       'scrollbarSlider.activeBackground': 'rgba(124,58,237,0.3)',
     },
   });
+
+  // Dark paper — inverted surfaces, violet accent shifted toward
+  // --accent-soft (#A78BFA) so it reads on a dark background.
+  monaco.editor.defineTheme('covenant-paper-dark', {
+    base: 'vs-dark',
+    inherit: true,
+    rules: [
+      { token: 'keyword', foreground: 'A78BFA', fontStyle: 'bold' },
+      { token: 'type', foreground: '34D399' },
+      { token: 'type.identifier', foreground: '34D399' },
+      { token: 'annotation', foreground: 'F87171', fontStyle: 'italic' },
+      { token: 'comment', foreground: '6B6860', fontStyle: 'italic' },
+      { token: 'string', foreground: 'FBBF24' },
+      { token: 'string.escape', foreground: 'FBBF24', fontStyle: 'bold' },
+      { token: 'number', foreground: 'F59E0B' },
+      { token: 'number.hex', foreground: 'F59E0B' },
+      { token: 'number.float', foreground: 'F59E0B' },
+      { token: 'operator', foreground: '9CA3AF' },
+      { token: 'delimiter', foreground: '9CA3AF' },
+      { token: 'identifier', foreground: 'F2EFE6' },
+    ],
+    colors: {
+      'editor.background': '#15141A',
+      'editor.foreground': '#F2EFE6',
+      'editor.lineHighlightBackground': '#1D1C24',
+      'editor.lineHighlightBorder': '#00000000',
+      'editorLineNumber.foreground': '#6B6860',
+      'editorLineNumber.activeForeground': '#F2EFE6',
+      'editorCursor.foreground': '#A78BFA',
+      'editor.selectionBackground': '#3B2D6B',
+      'editor.inactiveSelectionBackground': '#3B2D6B80',
+      'editor.findMatchBackground': '#3B2D6B',
+      'editor.findMatchHighlightBackground': '#3B2D6B80',
+      'editorWidget.background': '#15141A',
+      'editorWidget.border': 'rgba(242,239,230,0.12)',
+      'editorSuggestWidget.background': '#15141A',
+      'editorSuggestWidget.border': 'rgba(242,239,230,0.12)',
+      'editorSuggestWidget.selectedBackground': '#3B2D6B',
+      'scrollbarSlider.background': 'rgba(242,239,230,0.1)',
+      'scrollbarSlider.hoverBackground': 'rgba(242,239,230,0.2)',
+      'scrollbarSlider.activeBackground': 'rgba(167,139,250,0.3)',
+    },
+  });
 }

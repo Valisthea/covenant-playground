@@ -1,4 +1,5 @@
 import { useStore } from '../../lib/store';
+import { ThemeToggle } from './ThemeToggle';
 
 interface Props {
   onOpenGallery: () => void;
@@ -54,6 +55,7 @@ export function Header({ onOpenGallery, onOpenShare }: Props) {
         >
           Docs
         </a>
+        <ThemeToggle />
         <button
           className="pg-btn pg-btn--primary"
           onClick={() => void compile()}

@@ -1,8 +1,9 @@
 import { Editor as MonacoEditor, type OnMount } from '@monaco-editor/react';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
 import type { editor } from 'monaco-editor';
 import { registerCovenantLanguage } from './CovenantLang';
 import { useStore } from '../../lib/store';
+import { getEffective, getTheme } from '../../lib/theme';
 
 export function Editor() {
   const source = useStore((s) => s.source);
@@ -85,6 +86,15 @@ export function Editor() {
     monaco.editor.setModelMarkers(model, 'covenant-compiler', markers);
   }, [diagnostics]);
 
+  // Subscribe to the <html data-theme> attribute so the editor theme
+  // flips live when the user toggles dark mode from the Header.
+  const effective = useSyncExternalStore(
+    subscribeHtmlTheme,
+    getHtmlTheme,
+    getHtmlTheme,
+  );
+  const editorTheme = effective === 'dark' ? 'covenant-paper-dark' : 'covenant-paper';
+
   const fileEntries = Object.keys(files);
 
   return (
@@ -109,7 +119,7 @@ export function Editor() {
         <MonacoEditor
           height="100%"
           language="covenant"
-          theme="covenant-paper"
+          theme={editorTheme}
           value={source}
           path={currentFile}
           onChange={(value) => setSource(value ?? '')}
@@ -121,3 +131,21 @@ export function Editor() {
     </div>
   );
 }
+
+/* ---- html[data-theme] subscription (used by useSyncExternalStore) ---- */
+
+function getHtmlTheme(): 'light' | 'dark' {
+  if (typeof document === 'undefined') return getEffective(getTheme());
+  return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+}
+
+function subscribeHtmlTheme(onChange: () => void): () => void {
+  if (typeof MutationObserver === 'undefined') return () => {};
+  const obs = new MutationObserver(() => onChange());
+  obs.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-theme'],
+  });
+  return () => obs.disconnect();
+}
+

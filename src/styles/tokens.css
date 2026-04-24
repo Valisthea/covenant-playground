@@ -1,16 +1,22 @@
 /* ---------------------------------------------------------------------------
  * Design tokens — SHARED with covenant-lang.org + docs.covenant-lang.org.
  *
- * Any change here should be mirrored in:
+ * Any change to the LIGHT palette should be mirrored in:
  *   covenant-lang/covenant-lang.org (index.html <style>)
  *   covenant-lang/docs-src/src/styles/global.css
  *
  * Philosophy: paper-warm background, violet accent, serif headings for
- * the manifesto / marketing voice, mono for technical UI chrome. NO dark
- * mode in Tier 1; if Tier 4 ships dark mode the overrides land here.
+ * the manifesto / marketing voice, mono for technical UI chrome. Dark
+ * mode added in Tier 4 — inverted surfaces, softer accent glow,
+ * higher-contrast semantic colors for the darker background.
+ *
+ * Effective theme is toggled on <html data-theme="light|dark"> by
+ * src/lib/theme.ts. The :root block below is the LIGHT default so
+ * SSR / no-JS / first-paint render correctly.
  * ------------------------------------------------------------------------- */
 
-:root {
+:root,
+:root[data-theme='light'] {
   /* Surfaces */
   --paper: #fcfbf8;
   --paper-pure: #ffffff;
@@ -38,6 +44,7 @@
   --danger: #dc2626;
   --info: #0ea5e9;
   --tip: #16a34a;
+  --success: #1a5f3f;
 
   /* Type */
   --font-serif: 'EB Garamond', Georgia, serif;
@@ -48,4 +55,35 @@
   --size-header: 56px;
   --size-sidebar: 240px;
   --size-output: 280px;
+}
+
+:root[data-theme='dark'] {
+  /* Surfaces — dark, slightly warm to avoid pure-black fatigue */
+  --paper: #15141a;
+  --paper-pure: #0e0d12;
+  --paper-alt: #1d1c24;
+  --paper-warm: #1b1a22;
+
+  /* Ink (actually lightened text here) */
+  --ink: #f2efe6;
+  --ink-soft: #d5d2c9;
+  --ink-mute: #a09d95;
+  --ink-faint: #6b6860;
+
+  /* Structure */
+  --rule: rgba(242, 239, 230, 0.20);
+  --rule-faint: rgba(242, 239, 230, 0.09);
+
+  /* Accent — slightly brighter violet so it reads on dark paper */
+  --accent: #a78bfa;
+  --accent-soft: #c4b5fd;
+  --accent-faint: rgba(167, 139, 250, 0.12);
+  --accent-bg: rgba(167, 139, 250, 0.10);
+
+  /* Semantic — boosted saturation for dark bg contrast */
+  --warn: #fbbf24;
+  --danger: #f87171;
+  --info: #38bdf8;
+  --tip: #4ade80;
+  --success: #34d399;
 }
