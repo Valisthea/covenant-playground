@@ -32,3 +32,5 @@ yarn-error.log*
 
 # WASM build output (dropped here by `wasm-pack build` from covenant-src)
 public/covenant-wasm/
+
+.vercel
