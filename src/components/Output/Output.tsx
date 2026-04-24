@@ -4,8 +4,11 @@ import { DiagnosticsPane } from './DiagnosticsPane';
 import { BytecodePane } from './BytecodePane';
 import { AbiPane } from './AbiPane';
 import { IRPane } from './IRPane';
+import { DeployPanel } from '../Deploy/DeployPanel';
+import { TxHistoryPane } from '../Deploy/TxHistoryPane';
+import { getMockChain } from '../../lib/mockchain';
 
-type Tab = 'diagnostics' | 'bytecode' | 'abi' | 'ir';
+type Tab = 'diagnostics' | 'bytecode' | 'abi' | 'ir' | 'deploy' | 'txs';
 
 export function Output() {
   const [tab, setTab] = useState<Tab>('diagnostics');
@@ -13,6 +16,8 @@ export function Output() {
   const diagnostics = useStore((s) => s.diagnostics);
   const isCompiling = useStore((s) => s.isCompiling);
   const lastCompileAt = useStore((s) => s.lastCompileAt);
+  // Subscribe to chainRev so the tx-count badge updates live.
+  useStore((s) => s.chainRev);
 
   const { errorCount, warnCount } = useMemo(() => {
     let errorCount = 0;
@@ -27,6 +32,8 @@ export function Output() {
   const hasBytecode = !!result?.wasm || !!result?.bytecode;
   const hasAbi = !!result?.abi && result.abi.length > 0;
   const hasIr = !!result?.ir;
+  const canDeploy = !!result?.ok;
+  const txCount = getMockChain().txs.length;
 
   return (
     <>
@@ -74,6 +81,27 @@ export function Output() {
         >
           IR
         </button>
+        <button
+          role="tab"
+          aria-selected={tab === 'deploy'}
+          className={tab === 'deploy' ? 'active' : ''}
+          onClick={() => setTab('deploy')}
+          disabled={!canDeploy}
+          type="button"
+          title={canDeploy ? 'Deploy & interact' : 'Compile cleanly to enable deploy'}
+        >
+          Deploy
+        </button>
+        <button
+          role="tab"
+          aria-selected={tab === 'txs'}
+          className={tab === 'txs' ? 'active' : ''}
+          onClick={() => setTab('txs')}
+          type="button"
+        >
+          Txs
+          {txCount > 0 && <span className="badge badge--neutral">{txCount}</span>}
+        </button>
 
         <div style={{ flex: 1 }} />
         <StatusBadge isCompiling={isCompiling} timing={result?.timing.total} lastAt={lastCompileAt} />
@@ -84,6 +112,8 @@ export function Output() {
         {tab === 'bytecode' && <BytecodePane />}
         {tab === 'abi' && <AbiPane />}
         {tab === 'ir' && <IRPane />}
+        {tab === 'deploy' && <DeployPanel />}
+        {tab === 'txs' && <TxHistoryPane />}
       </div>
     </>
   );

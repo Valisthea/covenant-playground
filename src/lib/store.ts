@@ -5,10 +5,24 @@ import {
   type Diagnostic,
 } from './covenant-compiler';
 import { loadExampleSource } from './examples';
+import {
+  getMockChain,
+  type Address,
+  type TxReceipt,
+  type DeployedContract,
+} from './mockchain';
+import {
+  connectWallet,
+  deployToSepolia,
+  hasInjectedWallet,
+  type WalletState,
+} from './wallet';
 
 export interface FileMap {
   [name: string]: string;
 }
+
+export type DeployTarget = 'mockchain' | 'sepolia';
 
 interface State {
   // --- Source ---
@@ -22,7 +36,20 @@ interface State {
   isCompiling: boolean;
   lastCompileAt: number | null;
 
-  // --- Actions ---
+  // --- Deploy / MockChain ---
+  target: DeployTarget;
+  activeContract: Address | null;
+  /** Revision counter bumped whenever MockChain mutates so React re-renders. */
+  chainRev: number;
+  deployError: string | null;
+  isDeploying: boolean;
+
+  // --- Wallet (Sepolia) ---
+  wallet: WalletState | null;
+  walletError: string | null;
+  isConnectingWallet: boolean;
+
+  // --- Source actions ---
   setSource: (src: string) => void;
   loadSource: (src: string, fileName?: string) => void;
   compile: () => Promise<void>;
@@ -31,6 +58,24 @@ interface State {
   removeFile: (name: string) => void;
   switchFile: (name: string) => void;
   renameFile: (from: string, to: string) => void;
+
+  // --- Deploy actions ---
+  setTarget: (t: DeployTarget) => void;
+  setActiveAccount: (addr: Address) => void;
+  setActiveContract: (addr: Address | null) => void;
+  deploy: () => Promise<TxReceipt | null>;
+  callAction: (action: string, args: unknown[]) => TxReceipt | null;
+  resetChain: () => void;
+  mineBlocks: (n: number) => void;
+  advanceTime: (seconds: number) => void;
+
+  // --- Wallet actions ---
+  connectWallet: () => Promise<void>;
+  deployToSepolia: () => Promise<void>;
+
+  // --- Derived (computed on read) ---
+  getDeployedContracts: () => DeployedContract[];
+  getTxs: () => TxReceipt[];
 }
 
 const DEFAULT_EXAMPLE = `-- Welcome to Covenant Playground.
@@ -63,6 +108,16 @@ export const useStore = create<State>((set, get) => ({
   diagnostics: [],
   isCompiling: false,
   lastCompileAt: null,
+
+  target: 'mockchain',
+  activeContract: null,
+  chainRev: 0,
+  deployError: null,
+  isDeploying: false,
+
+  wallet: null,
+  walletError: null,
+  isConnectingWallet: false,
 
   setSource: (source) => {
     const { currentFile, files } = get();
@@ -184,4 +239,140 @@ export const useStore = create<State>((set, get) => ({
       currentFile: currentFile === from ? to : currentFile,
     });
   },
+
+  // -------------------------------------------------------------------------
+  // Deploy / MockChain actions
+  // -------------------------------------------------------------------------
+
+  setTarget: (target) => set({ target, deployError: null }),
+
+  setActiveAccount: (addr) => {
+    getMockChain().setActiveAccount(addr);
+    set((s) => ({ chainRev: s.chainRev + 1 }));
+  },
+
+  setActiveContract: (addr) => set({ activeContract: addr }),
+
+  deploy: async () => {
+    const { compileResult, target, currentFile } = get();
+    if (!compileResult) {
+      set({ deployError: 'Compile the contract first.' });
+      return null;
+    }
+    if (!compileResult.ok) {
+      set({ deployError: 'Fix compile errors before deploying.' });
+      return null;
+    }
+
+    if (target === 'sepolia') {
+      // Delegate to the wallet flow; surface errors but never block the UI.
+      void get().deployToSepolia();
+      return null;
+    }
+
+    set({ isDeploying: true, deployError: null });
+    try {
+      const name = currentFile.replace(/\.cov$/, '');
+      const receipt = getMockChain().deploy(compileResult, name);
+      set((s) => ({
+        chainRev: s.chainRev + 1,
+        activeContract: receipt.to,
+        isDeploying: false,
+      }));
+      return receipt;
+    } catch (e) {
+      const err = e as Error;
+      set({ isDeploying: false, deployError: err.message });
+      return null;
+    }
+  },
+
+  callAction: (action, args) => {
+    const { activeContract } = get();
+    if (!activeContract) {
+      set({ deployError: 'No deployed contract selected.' });
+      return null;
+    }
+    try {
+      const receipt = getMockChain().call(activeContract, action, args);
+      set((s) => ({ chainRev: s.chainRev + 1 }));
+      return receipt;
+    } catch (e) {
+      const err = e as Error;
+      set({ deployError: err.message });
+      return null;
+    }
+  },
+
+  resetChain: () => {
+    getMockChain().reset();
+    set((s) => ({
+      chainRev: s.chainRev + 1,
+      activeContract: null,
+      deployError: null,
+    }));
+  },
+
+  mineBlocks: (n) => {
+    getMockChain().mineBlocks(n);
+    set((s) => ({ chainRev: s.chainRev + 1 }));
+  },
+
+  advanceTime: (seconds) => {
+    getMockChain().advanceTime(seconds);
+    set((s) => ({ chainRev: s.chainRev + 1 }));
+  },
+
+  // -------------------------------------------------------------------------
+  // Wallet (Sepolia) actions
+  // -------------------------------------------------------------------------
+
+  connectWallet: async () => {
+    if (!hasInjectedWallet()) {
+      set({
+        walletError:
+          'No EIP-1193 wallet detected. Install MetaMask to connect.',
+      });
+      return;
+    }
+    set({ isConnectingWallet: true, walletError: null });
+    try {
+      const wallet = await connectWallet();
+      set({ wallet, isConnectingWallet: false });
+    } catch (e) {
+      const err = e as Error;
+      set({ isConnectingWallet: false, walletError: err.message });
+    }
+  },
+
+  deployToSepolia: async () => {
+    const { compileResult, wallet } = get();
+    if (!wallet || !wallet.address) {
+      set({ deployError: 'Connect your wallet first.' });
+      return;
+    }
+    if (!wallet.isSepolia) {
+      set({ deployError: 'Switch the wallet network to Sepolia first.' });
+      return;
+    }
+    if (!compileResult || !compileResult.ok) {
+      set({ deployError: 'Compile cleanly before deploying.' });
+      return;
+    }
+    try {
+      await deployToSepolia(compileResult.bytecode, compileResult.abi);
+    } catch (e) {
+      const err = e as Error;
+      set({ deployError: err.message });
+    }
+  },
+
+  // -------------------------------------------------------------------------
+  // Derived selectors — read-through to MockChain singleton
+  // -------------------------------------------------------------------------
+
+  getDeployedContracts: () =>
+    Array.from(getMockChain().contracts.values()),
+
+  getTxs: () => getMockChain().txs,
 }));
