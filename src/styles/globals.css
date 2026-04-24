@@ -1861,3 +1861,53 @@ body {
   color: var(--accent);
 }
 
+
+/* ─── Tour banner (playground → tour CTA) ─────────────────────────────────── */
+
+.tour-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  background: color-mix(in srgb, var(--accent) 10%, var(--paper));
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  font-size: 0.8125rem;
+  color: var(--ink-mute);
+  flex-shrink: 0;
+}
+
+.tour-banner strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.tour-banner-cta {
+  margin-left: 4px;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.tour-banner-cta:hover {
+  text-decoration: underline;
+}
+
+.tour-banner-dismiss {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--ink-mute);
+  padding: 2px;
+  border-radius: 3px;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+
+.tour-banner-dismiss:hover {
+  opacity: 1;
+}

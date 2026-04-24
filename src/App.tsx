@@ -1,15 +1,63 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Routes, Route, useSearchParams, Link } from 'react-router-dom';
 import { Header } from './components/Layout/Header';
 import { Editor } from './components/Editor/Editor';
 import { Output } from './components/Output/Output';
 import { ExamplesGallery } from './components/ExamplesGallery/ExamplesGallery';
 import { ShareDialog } from './components/Share/ShareDialog';
 import { OnboardingTour } from './components/Onboarding/OnboardingTour';
+import { Tour } from './components/Tour/Tour';
 import { useStore } from './lib/store';
+import { useTourStore } from './lib/tour-store';
 import { parseShareUrl } from './lib/share';
+import { BookOpen, X } from 'lucide-react';
 
-export default function App() {
+// ─── Tour banner shown on the playground ──────────────────────────────────────
+
+function TourBanner() {
+  const [dismissed, setDismissed] = useState(false);
+  const { completedLessonIds, progressPercent } = useTourStore();
+
+  // Don't show if user dismissed this session or completed the whole tour
+  if (dismissed || progressPercent() >= 100) return null;
+
+  const hasStarted = completedLessonIds.length > 0;
+
+  return (
+    <div className="tour-banner">
+      <BookOpen size={15} />
+      {hasStarted ? (
+        <>
+          <span>
+            Resume Tour of Covenant —{' '}
+            <strong>{completedLessonIds.length}/15 lessons</strong> completed
+          </span>
+          <Link to="/tour" className="tour-banner-cta">
+            Continue →
+          </Link>
+        </>
+      ) : (
+        <>
+          <span>New to Covenant? The interactive tour teaches you the language step-by-step.</span>
+          <Link to="/tour" className="tour-banner-cta">
+            Start Tour →
+          </Link>
+        </>
+      )}
+      <button
+        className="tour-banner-dismiss"
+        onClick={() => setDismissed(true)}
+        aria-label="Dismiss tour banner"
+      >
+        <X size={13} />
+      </button>
+    </div>
+  );
+}
+
+// ─── Playground (root route) ──────────────────────────────────────────────────
+
+function Playground() {
   const [params] = useSearchParams();
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
@@ -41,6 +89,8 @@ export default function App() {
         onOpenShare={() => setShareOpen(true)}
       />
 
+      <TourBanner />
+
       <div className="app-body">
         <div className="app-editor">
           <div className="mobile-notice">
@@ -63,5 +113,17 @@ export default function App() {
       {shareOpen && <ShareDialog onClose={() => setShareOpen(false)} />}
       <OnboardingTour />
     </div>
+  );
+}
+
+// ─── Root router ──────────────────────────────────────────────────────────────
+
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/tour/:lessonId" element={<Tour />} />
+      <Route path="/tour" element={<Tour />} />
+      <Route path="*" element={<Playground />} />
+    </Routes>
   );
 }
