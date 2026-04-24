@@ -282,7 +282,7 @@ export function registerCovenantLanguage(monaco: Monaco): void {
     colors: {
       'editor.background': '#FFFFFF',
       'editor.foreground': '#1A1A1A',
-      'editor.lineHighlightBackground': '#F5F5F5',
+      'editor.lineHighlightBackground': '#FAFAFA',
       'editor.lineHighlightBorder': '#00000000',
       'editorLineNumber.foreground': '#888888',
       'editorLineNumber.activeForeground': '#1A1A1A',

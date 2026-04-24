@@ -17,14 +17,14 @@
 
 :root,
 :root[data-theme='light'] {
-  /* Surfaces — uniformly white in light mode so the playground reads as
-   * one continuous surface (no warm/cool split between editor and side
-   * panels). --paper-alt is kept just barely off-white for subtle chip
-   * backgrounds (search input, tab counts, etc.) where we still want a
-   * faint separation from the page. */
+  /* Surfaces — UNIFORMLY pure white in light mode. Every named surface
+   * resolves to #ffffff so the playground reads as a single continuous
+   * sheet of paper. Subtle separations between chips/inputs/tabs come
+   * exclusively from --rule / --rule-faint borders, not from background
+   * tints. This kills every visible warm/cool split. */
   --paper: #ffffff;
   --paper-pure: #ffffff;
-  --paper-alt: #f5f5f5;
+  --paper-alt: #ffffff;
   --paper-warm: #ffffff;
 
   /* Ink */
