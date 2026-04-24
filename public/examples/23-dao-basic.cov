@@ -1,0 +1,69 @@
+-- DAOBasic.cov · token-weighted DAO with propose/vote/execute phases.
+-- Any token holder can propose. Voting weight is proportional to token
+-- balance at proposal creation time. After the voting window, anyone
+-- can call execute() to run the proposal if the quorum + majority
+-- thresholds are met.
+
+record DAOBasic {
+    field gov_token: address
+    field proposals: map<u64, Proposal>
+    field next_id: u64
+    field voting_period: duration
+    field quorum_pct: u32
+
+    struct Proposal {
+        proposer: address
+        target: address
+        calldata: bytes
+        start: time
+        end: time
+        yes_votes: amount
+        no_votes: amount
+        executed: bool
+        voted: map<address, bool>
+    }
+
+    event Proposed(id: u64, proposer: address)
+    event Voted(id: u64, voter: address, support: bool, weight: amount)
+    event Executed(id: u64)
+
+    action propose(target: address, calldata: bytes) {
+        let id = next_id
+        next_id = next_id + 1
+        proposals[id] = Proposal {
+            proposer: caller,
+            target, calldata,
+            start: block.timestamp,
+            end: block.timestamp + voting_period,
+            yes_votes: 0, no_votes: 0,
+            executed: false,
+            voted: {}
+        }
+        emit Proposed(id, caller)
+    }
+
+    action vote(id: u64, support: bool) {
+        let p = proposals[id]
+        require(block.timestamp < p.end, "voting closed")
+        require(!p.voted[caller], "already voted")
+        let weight = token_balance(gov_token, caller)
+        require(weight > 0, "no voting power")
+        if support { proposals[id].yes_votes = p.yes_votes + weight }
+        else       { proposals[id].no_votes  = p.no_votes  + weight }
+        proposals[id].voted[caller] = true
+        emit Voted(id, caller, support, weight)
+    }
+
+    action execute(id: u64) {
+        let p = proposals[id]
+        require(block.timestamp >= p.end, "still voting")
+        require(!p.executed, "already executed")
+        let total = p.yes_votes + p.no_votes
+        let supply = token_total_supply(gov_token)
+        require(total * 100 >= supply * quorum_pct, "quorum not met")
+        require(p.yes_votes > p.no_votes, "proposal rejected")
+        proposals[id].executed = true
+        call(p.target, p.calldata)
+        emit Executed(id)
+    }
+}

@@ -1,0 +1,68 @@
+-- GuardianRecovery.cov · social recovery for a wallet or account.
+-- The owner designates N guardians. If the owner loses access, a
+-- threshold of guardians can collectively rotate ownership to a new
+-- address. This is the pattern behind Argent, Safe, and EIP-4337
+-- account-abstraction recovery modules.
+
+record GuardianRecovery {
+    field owner: address
+    field guardians: map<address, bool>
+    field threshold: u32
+    field guardian_count: u32
+    field recovery_proposals: map<address, RecoveryProposal>
+
+    struct RecoveryProposal {
+        new_owner: address
+        approvals: u32
+        approved_by: map<address, bool>
+        initiated_at: time
+    }
+
+    event GuardianAdded(guardian: address)
+    event GuardianRemoved(guardian: address)
+    event RecoveryInitiated(new_owner: address, by: address)
+    event RecoveryApproved(new_owner: address, by: address, approvals: u32)
+    event Recovered(old_owner: address, new_owner: address)
+
+    action add_guardian(g: address) {
+        only when caller == owner
+        require(!guardians[g], "already a guardian")
+        guardians[g] = true
+        guardian_count = guardian_count + 1
+        emit GuardianAdded(g)
+    }
+
+    action remove_guardian(g: address) {
+        only when caller == owner
+        require(guardians[g], "not a guardian")
+        guardians[g] = false
+        guardian_count = guardian_count - 1
+        emit GuardianRemoved(g)
+    }
+
+    action initiate_recovery(new_owner: address) {
+        require(guardians[caller], "not a guardian")
+        recovery_proposals[new_owner] = RecoveryProposal {
+            new_owner,
+            approvals: 1,
+            approved_by: { caller: true },
+            initiated_at: block.timestamp
+        }
+        emit RecoveryInitiated(new_owner, caller)
+    }
+
+    action approve_recovery(new_owner: address) {
+        require(guardians[caller], "not a guardian")
+        let p = recovery_proposals[new_owner]
+        require(!p.approved_by[caller], "already approved")
+        recovery_proposals[new_owner].approved_by[caller] = true
+        recovery_proposals[new_owner].approvals = p.approvals + 1
+        emit RecoveryApproved(new_owner, caller, p.approvals + 1)
+
+        if p.approvals + 1 >= threshold {
+            let old = owner
+            owner = new_owner
+            emit Recovered(old, new_owner)
+        }
+    }
+}

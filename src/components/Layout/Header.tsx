@@ -42,7 +42,7 @@ export function Header({ onOpenGallery, onOpenShare }: Props) {
 
       <div className="pg-header-actions">
         <button className="pg-btn" onClick={onOpenGallery} type="button">
-          Examples
+          Examples (25)
         </button>
         <button className="pg-btn" onClick={onOpenShare} type="button">
           Share

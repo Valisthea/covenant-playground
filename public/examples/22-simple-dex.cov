@@ -1,0 +1,46 @@
+-- SimpleDEX.cov · a minimal constant-product AMM (x·y = k).
+-- The foundational pattern behind Uniswap V1. This is intentionally
+-- minimal — no fees, no slippage protection, no LP tokens. Real
+-- production AMMs (Uniswap V4 with hooks) need much more logic.
+
+record SimpleDEX {
+    field reserve_a: amount
+    field reserve_b: amount
+    field token_a: address
+    field token_b: address
+
+    event Swapped(user: address, in_is_a: bool, in_amt: amount, out_amt: amount)
+    event LiquidityAdded(provider: address, amt_a: amount, amt_b: amount)
+
+    action init(ta: address, tb: address) {
+        only deployer
+        token_a = ta
+        token_b = tb
+    }
+
+    action add_liquidity(amt_a: amount, amt_b: amount) {
+        require(amt_a > 0 && amt_b > 0, "nonzero amounts required")
+        reserve_a = reserve_a + amt_a
+        reserve_b = reserve_b + amt_b
+        emit LiquidityAdded(caller, amt_a, amt_b)
+    }
+
+    action swap_a_for_b(amt_in: amount) {
+        require(amt_in > 0, "zero input")
+        require(reserve_a > 0 && reserve_b > 0, "no liquidity")
+        -- x*y = k: (reserve_a + amt_in) * (reserve_b - amt_out) = k
+        let amt_out = reserve_b - (reserve_a * reserve_b) / (reserve_a + amt_in)
+        require(amt_out < reserve_b, "insufficient liquidity")
+        reserve_a = reserve_a + amt_in
+        reserve_b = reserve_b - amt_out
+        emit Swapped(caller, true, amt_in, amt_out)
+    }
+
+    view price_a_in_b returns amount {
+        if reserve_a == 0 { 0 } else { reserve_b * 10**18 / reserve_a }
+    }
+
+    view reserves returns (amount, amount) {
+        (reserve_a, reserve_b)
+    }
+}

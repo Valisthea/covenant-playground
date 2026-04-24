@@ -1,0 +1,46 @@
+-- VoteDelegation.cov · delegate your voting weight to another address.
+-- Token holders often don't want to actively vote. Delegation lets them
+-- point their voting power at a representative who does. The delegate
+-- accumulates weight from all who delegated to them.
+
+record VoteDelegation {
+    field delegates: map<address, address>
+    field voting_weight: map<address, amount>
+
+    event Delegated(from: address, to: address, weight: amount)
+    event Revoked(from: address, old_delegate: address, weight: amount)
+
+    action delegate(to: address) {
+        require(to != caller, "cannot self-delegate")
+        let my_weight = token_balance(token_address(), caller)
+        require(my_weight > 0, "no tokens")
+
+        -- Revoke previous delegation first
+        let prev = delegates[caller]
+        if prev != address(0) {
+            voting_weight[prev] = voting_weight[prev] - my_weight
+            emit Revoked(caller, prev, my_weight)
+        }
+
+        delegates[caller] = to
+        voting_weight[to] = voting_weight[to] + my_weight
+        emit Delegated(caller, to, my_weight)
+    }
+
+    action revoke() {
+        let prev = delegates[caller]
+        require(prev != address(0), "no delegation")
+        let my_weight = token_balance(token_address(), caller)
+        voting_weight[prev] = voting_weight[prev] - my_weight
+        delegates[caller] = address(0)
+        emit Revoked(caller, prev, my_weight)
+    }
+
+    view weight_of(account: address) returns amount {
+        voting_weight[account]
+    }
+
+    view delegate_of(account: address) returns address {
+        delegates[account]
+    }
+}

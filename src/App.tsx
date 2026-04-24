@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Routes, Route, useSearchParams, Link } from 'react-router-dom';
+import { Routes, Route, useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { Header } from './components/Layout/Header';
 import { Editor } from './components/Editor/Editor';
 import { Output } from './components/Output/Output';
@@ -10,6 +10,8 @@ import { Tour } from './components/Tour/Tour';
 import { useStore } from './lib/store';
 import { useTourStore } from './lib/tour-store';
 import { parseShareUrl } from './lib/share';
+import { getExampleById } from './examples/registry';
+import { loadExampleSource } from './examples/loader';
 import { BookOpen, X } from 'lucide-react';
 
 // ─── Tour banner shown on the playground ──────────────────────────────────────
@@ -58,17 +60,40 @@ function TourBanner() {
 // ─── Playground (root route) ──────────────────────────────────────────────────
 
 function Playground() {
-  const [params] = useSearchParams();
-  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [params, setParams] = useSearchParams();
+  const navigate = useNavigate();
   const [shareOpen, setShareOpen] = useState(false);
 
   const loadSource = useStore((s) => s.loadSource);
   const compile = useStore((s) => s.compile);
 
-  // One-shot init: if URL carries a ?code= share param, decode and load it.
-  // Otherwise the store's DEFAULT_EXAMPLE is what Monaco sees.
+  // One-shot init: load from ?example=, then ?code=, then compile the default.
   useEffect(() => {
+    const exampleId = params.get('example');
     const encoded = params.get('code');
+
+    if (exampleId) {
+      const ex = getExampleById(exampleId);
+      if (ex) {
+        loadExampleSource(ex)
+          .then((source) => {
+            loadSource(source, 'main.cov');
+          })
+          .catch(() => {
+            // Fall back to compiling the default buffer
+            void compile();
+          })
+          .finally(() => {
+            // Strip the param from the URL so refreshes don't reload the
+            // example and overwrite in-flight edits.
+            const next = new URLSearchParams(params);
+            next.delete('example');
+            setParams(next, { replace: true });
+          });
+        return;
+      }
+    }
+
     if (encoded) {
       const source = parseShareUrl(window.location.href);
       if (source) {
@@ -76,8 +101,8 @@ function Playground() {
         return;
       }
     }
-    // Kick off an initial compile so the output pane is never empty
-    // on first paint.
+
+    // Default path: ensure the output pane is never empty on first paint.
     void compile();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -85,7 +110,7 @@ function Playground() {
   return (
     <div className="app-shell">
       <Header
-        onOpenGallery={() => setGalleryOpen(true)}
+        onOpenGallery={() => navigate('/examples')}
         onOpenShare={() => setShareOpen(true)}
       />
 
@@ -107,9 +132,6 @@ function Playground() {
         </div>
       </div>
 
-      {galleryOpen && (
-        <ExamplesGallery onClose={() => setGalleryOpen(false)} />
-      )}
       {shareOpen && <ShareDialog onClose={() => setShareOpen(false)} />}
       <OnboardingTour />
     </div>
@@ -123,6 +145,7 @@ export default function App() {
     <Routes>
       <Route path="/tour/:lessonId" element={<Tour />} />
       <Route path="/tour" element={<Tour />} />
+      <Route path="/examples" element={<ExamplesGallery />} />
       <Route path="*" element={<Playground />} />
     </Routes>
   );

@@ -1,0 +1,33 @@
+-- SimpleCounter.cov · a canonical beginner contract.
+-- A number that anyone can increment/decrement, with an event stream
+-- and a guard that prevents decrement below zero. Demonstrates state
+-- mutation, events, and `given` guards side-by-side.
+
+record SimpleCounter {
+    field count: amount
+    field last_updater: address
+
+    event Incremented(by: address, new_value: amount)
+    event Decremented(by: address, new_value: amount)
+
+    action increment() {
+        count = count + 1
+        last_updater = caller
+        emit Incremented(caller, count)
+    }
+
+    action decrement() {
+        require(count > 0, "count cannot go negative")
+        count = count - 1
+        last_updater = caller
+        emit Decremented(caller, count)
+    }
+
+    view get_count returns amount {
+        count
+    }
+
+    view get_last_updater returns address {
+        last_updater
+    }
+}

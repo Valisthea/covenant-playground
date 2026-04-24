@@ -1,0 +1,44 @@
+-- TypeReference.cov · a non-functional reference showing every primitive.
+-- This contract doesn't do anything useful — it exists so you can copy
+-- the exact syntax for any type you need. Pay attention to the three
+-- privacy qualifiers: `encrypted`, `private`, `sealed` — they map to
+-- FHE, off-chain witness, and MPC-sealed state respectively.
+
+record TypeReference {
+    -- Numeric types
+    field amount_field: amount
+    field u256_field: u256
+    field u128_field: u128
+    field u64_field: u64
+    field u32_field: u32
+    field u8_field: u8
+    field i256_field: i256
+    field i64_field: i64
+
+    -- Identity types
+    field address_field: address
+    field hash_field: hash
+    field bytes_field: bytes
+    field bytes32_field: bytes32
+
+    -- Boolean and text
+    field bool_field: bool
+    field text_field: text
+
+    -- Temporal types
+    field time_field: time
+    field duration_field: duration
+
+    -- Composite types
+    field map_field: map<address, amount>
+    field array_field: array<amount>
+
+    -- Privacy qualifiers
+    field encrypted_amount: encrypted<amount>
+    field private_bytes: private<bytes>
+    field sealed_state: sealed<bytes>
+
+    view show_basic_types returns (amount, bool, text, address, time) {
+        (amount_field, bool_field, text_field, address_field, time_field)
+    }
+}

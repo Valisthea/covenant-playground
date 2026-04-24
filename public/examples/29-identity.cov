@@ -1,0 +1,47 @@
+-- Identity.cov · self-sovereign identity with ZK claim proofs.
+-- A user holds a verifiable credential issued by a trusted authority.
+-- They prove claims about it (age > 18, country = X, accredited
+-- investor) without revealing the underlying data. This is the "show
+-- your ID without showing your ID" pattern.
+
+record Identity {
+    field issuers: map<address, bool>
+    field credential_roots: map<address, hash>  -- user → merkle root of claims
+    field revoked: map<hash, bool>
+
+    event CredentialIssued(subject: address, root: hash, by: address)
+    event CredentialRevoked(root: hash, by: address)
+    event ClaimVerified(subject: address, claim_type: text)
+
+    action add_issuer(iss: address) {
+        only deployer
+        issuers[iss] = true
+    }
+
+    action issue_credential(subject: address, root: hash) {
+        require(issuers[caller], "not an issuer")
+        credential_roots[subject] = root
+        emit CredentialIssued(subject, root, caller)
+    }
+
+    action revoke_credential(root: hash) {
+        require(issuers[caller], "not an issuer")
+        revoked[root] = true
+        emit CredentialRevoked(root, caller)
+    }
+
+    @verified_by(zk)
+    view prove_claim(subject: address, claim_type: text, proof: bytes) returns bool {
+        let root = credential_roots[subject]
+        require(root != hash(0), "no credential")
+        require(!revoked[root], "credential revoked")
+        zk_verify(proof, [root, claim_type])
+            or revert("invalid proof")
+        true
+    }
+
+    view is_valid_subject(subject: address) returns bool {
+        let root = credential_roots[subject]
+        root != hash(0) && !revoked[root]
+    }
+}

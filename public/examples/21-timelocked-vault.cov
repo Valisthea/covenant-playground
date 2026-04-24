@@ -1,0 +1,38 @@
+-- TimelockedVault.cov · deposits are locked until a chosen unlock time.
+-- Each depositor chooses their own lock expiry. Withdrawals are gated
+-- on `block.timestamp >= unlock_time[caller]`. Useful for savings
+-- schemes, token locks during DAO votes, and scheduled releases.
+
+record TimelockedVault {
+    field deposits: map<address, amount>
+    field unlock_time: map<address, time>
+
+    event Deposited(from: address, value: amount, unlocks_at: time)
+    event Withdrawn(to: address, value: amount)
+
+    action deposit(value: amount, lock_duration: duration) {
+        require(value > 0, "zero deposit")
+        require(lock_duration >= 1 days, "lock must be >= 1 day")
+        deposits[caller] = deposits[caller] + value
+        let new_unlock = block.timestamp + lock_duration
+        if new_unlock > unlock_time[caller] {
+            unlock_time[caller] = new_unlock
+        }
+        emit Deposited(caller, value, unlock_time[caller])
+    }
+
+    action withdraw(value: amount) {
+        require(block.timestamp >= unlock_time[caller], "still locked")
+        require(deposits[caller] >= value, "insufficient balance")
+        deposits[caller] = deposits[caller] - value
+        emit Withdrawn(caller, value)
+    }
+
+    view my_balance returns amount {
+        deposits[caller]
+    }
+
+    view my_unlock_time returns time {
+        unlock_time[caller]
+    }
+}

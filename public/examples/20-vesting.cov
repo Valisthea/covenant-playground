@@ -1,0 +1,48 @@
+-- Vesting.cov · linear token vesting with a cliff.
+-- Tokens are allocated at deploy but claimable over time. Before the
+-- cliff, nothing vests. After the cliff, the entitled amount grows
+-- linearly until `end`. Used for team/investor tokenomics.
+
+record Vesting {
+    field beneficiary: address
+    field total: amount
+    field start: time
+    field cliff: time
+    field end: time
+    field released: amount
+
+    action init(bene: address, total_amt: amount, start_t: time, cliff_t: time, end_t: time) {
+        only deployer
+        require(cliff_t >= start_t, "cliff before start")
+        require(end_t >= cliff_t, "end before cliff")
+        beneficiary = bene
+        total = total_amt
+        start = start_t
+        cliff = cliff_t
+        end = end_t
+    }
+
+    action release() {
+        require(block.timestamp >= cliff, "still in cliff")
+        let vested = vested_amount()
+        let claimable = vested - released
+        require(claimable > 0, "nothing to release")
+        released = vested
+        -- transfer `claimable` to beneficiary
+        emit Released(beneficiary, claimable)
+    }
+
+    view vested_amount returns amount {
+        if block.timestamp < cliff { 0 }
+        else if block.timestamp >= end { total }
+        else {
+            let elapsed = block.timestamp - start
+            let duration = end - start
+            total * elapsed / duration
+        }
+    }
+
+    view releasable returns amount {
+        vested_amount() - released
+    }
+}
