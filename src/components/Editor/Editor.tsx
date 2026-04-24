@@ -108,6 +108,18 @@ export function Editor() {
   // only active when the user is in Inspect layout.
   useSourceAnnotations(editorRef, monacoRef);
 
+  // Sprint 21 — Layer Explorer (and any other panel) can request a
+  // jump-to-line via the store. We watch `navTarget.rev` so repeated
+  // requests for the same line still scroll the editor.
+  const navTarget = useStore((s) => s.navTarget);
+  useEffect(() => {
+    const ed = editorRef.current;
+    if (!ed || !navTarget) return;
+    ed.revealLineInCenter(navTarget.line);
+    ed.setPosition({ lineNumber: navTarget.line, column: navTarget.column });
+    ed.focus();
+  }, [navTarget]);
+
   // Subscribe to the <html data-theme> attribute so the editor theme
   // flips live when the user toggles dark mode from the Header.
   const effective = useSyncExternalStore(

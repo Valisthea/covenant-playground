@@ -4,7 +4,9 @@ import { Header } from './components/Layout/Header';
 import { Editor } from './components/Editor/Editor';
 import { Output } from './components/Output/Output';
 import { ArtifactInspector } from './components/Inspector/ArtifactInspector';
+import { LayerExplorer } from './components/LayerExplorer/LayerExplorer';
 import { ExamplesGallery } from './components/ExamplesGallery/ExamplesGallery';
+import type { LayerId } from './lib/layer-analysis';
 import { ShareDialog } from './components/Share/ShareDialog';
 import { OnboardingTour } from './components/Onboarding/OnboardingTour';
 import { Tour } from './components/Tour/Tour';
@@ -69,6 +71,49 @@ function Playground() {
   const compile = useStore((s) => s.compile);
   const layoutMode = useStore((s) => s.layoutMode);
   const setLayoutMode = useStore((s) => s.setLayoutMode);
+  const showLayerExplorer = useStore((s) => s.showLayerExplorer);
+  const setShowLayerExplorer = useStore((s) => s.setShowLayerExplorer);
+  const navigateToSourceLine = useStore((s) => s.navigateToSourceLine);
+
+  // ── Layer Explorer ↔ URL sync ─────────────────────────────────────────
+  // ?layer=<id> auto-opens the explorer with that layer expanded.
+  const initialLayer = (params.get('layer') as LayerId | null) ?? null;
+  useEffect(() => {
+    if (initialLayer && !showLayerExplorer) {
+      setShowLayerExplorer(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const next = new URLSearchParams(params);
+    if (showLayerExplorer) {
+      if (next.get('layers') !== '1' && !next.has('layer')) {
+        next.set('layers', '1');
+        setParams(next, { replace: true });
+      }
+    } else {
+      let dirty = false;
+      if (next.has('layers')) {
+        next.delete('layers');
+        dirty = true;
+      }
+      if (next.has('layer')) {
+        next.delete('layer');
+        dirty = true;
+      }
+      if (dirty) setParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showLayerExplorer]);
+
+  // Honor ?layers=1 on first paint
+  useEffect(() => {
+    if (params.get('layers') === '1' && !showLayerExplorer) {
+      setShowLayerExplorer(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Layout mode ↔ URL sync ────────────────────────────────────────────
   // On mount, honor ?layout=inspect. Then keep the URL in sync as the
@@ -148,7 +193,11 @@ function Playground() {
 
       <TourBanner />
 
-      <div className={`app-body ${layoutMode === 'inspect' ? 'is-inspect' : ''}`}>
+      <div
+        className={`app-body ${layoutMode === 'inspect' ? 'is-inspect' : ''} ${
+          showLayerExplorer ? 'has-layers' : ''
+        }`}
+      >
         <div className="app-editor">
           <div className="mobile-notice">
             <strong>Desktop-only editing</strong>
@@ -168,6 +217,16 @@ function Playground() {
         <div className="app-side">
           <Output />
         </div>
+
+        {showLayerExplorer && (
+          <div className="app-layers">
+            <LayerExplorer
+              initialExpanded={initialLayer}
+              onNavigateToLine={(line) => navigateToSourceLine(line)}
+              onClose={() => setShowLayerExplorer(false)}
+            />
+          </div>
+        )}
       </div>
 
       {shareOpen && <ShareDialog onClose={() => setShareOpen(false)} />}

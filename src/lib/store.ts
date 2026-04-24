@@ -67,6 +67,19 @@ interface State {
   setShowNoiseAnnotations: (b: boolean) => void;
   setShowConstraintAnnotations: (b: boolean) => void;
 
+  // --- Layer Explorer (Sprint 21) ---
+  /** Whether the architecture sidebar is visible. */
+  showLayerExplorer: boolean;
+  setShowLayerExplorer: (b: boolean) => void;
+  /**
+   * One-shot navigation request from the Layer Explorer (or any other
+   * panel) to the source editor. Components subscribe and react with
+   * `revealLineInCenter` + `setPosition`. Bumping the rev with the same
+   * line still triggers a fresh reveal.
+   */
+  navTarget: { line: number; column: number; rev: number } | null;
+  navigateToSourceLine: (line: number, column?: number) => void;
+
   // --- Source actions ---
   setSource: (src: string) => void;
   loadSource: (src: string, fileName?: string) => void;
@@ -151,6 +164,15 @@ export const useStore = create<State>((set, get) => ({
   setShowNoiseAnnotations: (showNoiseAnnotations) => set({ showNoiseAnnotations }),
   setShowConstraintAnnotations: (showConstraintAnnotations) =>
     set({ showConstraintAnnotations }),
+
+  // Layer Explorer defaults
+  showLayerExplorer: false,
+  navTarget: null,
+  setShowLayerExplorer: (showLayerExplorer) => set({ showLayerExplorer }),
+  navigateToSourceLine: (line, column = 1) => {
+    const prev = get().navTarget?.rev ?? 0;
+    set({ navTarget: { line, column, rev: prev + 1 } });
+  },
 
   setSource: (source) => {
     const { currentFile, files } = get();

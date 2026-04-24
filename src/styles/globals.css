@@ -95,6 +95,45 @@ body {
   }
 }
 
+/* ---------- Layer Explorer side panel (Sprint 21) ---------- */
+
+.app-layers {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  border-left: 1px solid var(--rule-faint);
+  background: var(--paper);
+}
+
+.app-body.has-layers {
+  /* simple + layers: editor | output | layers */
+  grid-template-columns: minmax(0, 1fr) 380px 340px;
+}
+
+.app-body.is-inspect.has-layers {
+  /* inspect + layers: editor | inspector | output | layers */
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 1fr) 340px 320px;
+}
+
+@media (max-width: 1400px) {
+  .app-body.is-inspect.has-layers {
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 1fr) 300px 300px;
+  }
+}
+
+@media (max-width: 1100px) {
+  .app-body.has-layers {
+    grid-template-columns: minmax(0, 1fr) 340px;
+  }
+  .app-body.is-inspect.has-layers {
+    grid-template-columns: minmax(0, 1fr) 340px;
+  }
+  .app-layers {
+    display: none;
+  }
+}
+
 /* ---------- Layout toggle (in header) ---------- */
 
 .pg-layout-toggle {
@@ -219,6 +258,18 @@ body {
 .pg-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.pg-btn--icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.pg-btn--icon.is-active {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
 }
 
 .pg-btn--primary {

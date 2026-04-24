@@ -1,3 +1,4 @@
+import { Layers } from 'lucide-react';
 import { useStore } from '../../lib/store';
 import { ThemeToggle } from './ThemeToggle';
 import { LayoutToggle } from './LayoutToggle';
@@ -10,6 +11,8 @@ interface Props {
 export function Header({ onOpenGallery, onOpenShare }: Props) {
   const isCompiling = useStore((s) => s.isCompiling);
   const compile = useStore((s) => s.compile);
+  const showLayerExplorer = useStore((s) => s.showLayerExplorer);
+  const setShowLayerExplorer = useStore((s) => s.setShowLayerExplorer);
 
   return (
     <header className="pg-header">
@@ -43,6 +46,16 @@ export function Header({ onOpenGallery, onOpenShare }: Props) {
 
       <div className="pg-header-actions">
         <LayoutToggle />
+        <button
+          className={`pg-btn pg-btn--icon ${showLayerExplorer ? 'is-active' : ''}`}
+          onClick={() => setShowLayerExplorer(!showLayerExplorer)}
+          type="button"
+          title="Show / hide Styx architecture layers"
+          aria-pressed={showLayerExplorer}
+        >
+          <Layers size={13} />
+          <span>Architecture</span>
+        </button>
         <button className="pg-btn" onClick={onOpenGallery} type="button">
           Examples (25)
         </button>
