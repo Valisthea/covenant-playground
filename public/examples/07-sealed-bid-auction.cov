@@ -1,0 +1,37 @@
+-- SealedBidAuction.cov · every bid is FHE-encrypted until settlement.
+-- Nobody — not even the auctioneer — can see what anyone bid before
+-- the auction closes. The winner is computed homomorphically, decrypted
+-- only for the final result.
+
+ballot SealedBidAuction {
+    field item: text
+    field deadline: time
+    field bids: map<address, encrypted<amount>>
+    field winner: address
+    field winning_bid: amount
+
+    action place_bid(bid_enc: ciphertext) {
+        require(block.timestamp < deadline, "auction closed")
+        bids[caller] = bid_enc
+    }
+
+    action settle() {
+        require(block.timestamp >= deadline, "too early")
+
+        -- Homomorphic comparison: find max across all ciphertext bids.
+        let mut max_bid_enc = fhe_encrypt(0)
+        let mut max_bidder = 0x0
+
+        for (bidder, bid_enc) in bids {
+            let is_larger_enc = fhe_gt(bid_enc, max_bid_enc)
+            max_bid_enc  = fhe_select(is_larger_enc, bid_enc, max_bid_enc)
+            max_bidder   = if fhe_decrypt(is_larger_enc) { bidder } else { max_bidder }
+        }
+
+        winner = max_bidder
+        winning_bid = fhe_decrypt(max_bid_enc)
+        emit Settled(winner, winning_bid)
+    }
+
+    event Settled(winner: address, winning_bid: amount)
+}

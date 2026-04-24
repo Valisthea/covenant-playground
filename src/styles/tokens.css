@@ -1,0 +1,51 @@
+/* ---------------------------------------------------------------------------
+ * Design tokens — SHARED with covenant-lang.org + docs.covenant-lang.org.
+ *
+ * Any change here should be mirrored in:
+ *   covenant-lang/covenant-lang.org (index.html <style>)
+ *   covenant-lang/docs-src/src/styles/global.css
+ *
+ * Philosophy: paper-warm background, violet accent, serif headings for
+ * the manifesto / marketing voice, mono for technical UI chrome. NO dark
+ * mode in Tier 1; if Tier 4 ships dark mode the overrides land here.
+ * ------------------------------------------------------------------------- */
+
+:root {
+  /* Surfaces */
+  --paper: #fcfbf8;
+  --paper-pure: #ffffff;
+  --paper-alt: #f5f4f0;
+  --paper-warm: #f7f5f0;
+
+  /* Ink */
+  --ink: #1a1a1a;
+  --ink-soft: #2d2d2d;
+  --ink-mute: #555555;
+  --ink-faint: #888888;
+
+  /* Structure */
+  --rule: rgba(26, 26, 26, 0.25);
+  --rule-faint: rgba(26, 26, 26, 0.10);
+
+  /* Accent — violet */
+  --accent: #7c3aed;
+  --accent-soft: #a78bfa;
+  --accent-faint: #ede9fe;
+  --accent-bg: rgba(124, 58, 237, 0.06);
+
+  /* Semantic */
+  --warn: #d97706;
+  --danger: #dc2626;
+  --info: #0ea5e9;
+  --tip: #16a34a;
+
+  /* Type */
+  --font-serif: 'EB Garamond', Georgia, serif;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', Menlo, monospace;
+
+  /* Dimensions */
+  --size-header: 56px;
+  --size-sidebar: 240px;
+  --size-output: 280px;
+}

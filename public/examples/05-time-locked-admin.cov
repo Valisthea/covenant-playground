@@ -1,0 +1,32 @@
+-- TimeLockedAdmin.cov · queued actions with a mandatory delay.
+-- Any privileged call is first queued, and can only be executed after
+-- the delay has elapsed. Buys the community time to react if a malicious
+-- or buggy change is proposed.
+
+record TimeLockedAdmin {
+    field admin: address
+    field delay: duration
+    field queued: map<hash, time>
+
+    action queue(target: address, calldata: bytes) {
+        only when caller == admin
+        let id = hash(target, calldata)
+        queued[id] = block.timestamp + delay
+    }
+
+    action execute(target: address, calldata: bytes) {
+        only when caller == admin
+        let id = hash(target, calldata)
+        let eta = queued[id]
+        require(eta > 0, "not queued")
+        require(block.timestamp >= eta, "delay not elapsed")
+        queued[id] = 0
+        call(target, calldata)
+    }
+
+    action cancel(target: address, calldata: bytes) {
+        only when caller == admin
+        let id = hash(target, calldata)
+        queued[id] = 0
+    }
+}

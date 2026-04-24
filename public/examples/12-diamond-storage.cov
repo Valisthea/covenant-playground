@@ -1,0 +1,32 @@
+-- DiamondStorage.cov · namespaced storage for upgrade-safe state.
+-- Storage slots are derived from keccak(namespace), not sequential from
+-- slot 0. Upgraded implementations can add new fields without ever
+-- conflicting with existing state. Covenant makes the namespace an
+-- attribute of the record rather than a hand-rolled struct-hash.
+
+record UserModule @storage_namespace("cov.user.v1") {
+    field users: map<address, User>
+    field total_users: u64
+
+    struct User {
+        registered_at: time
+        tier: u8
+    }
+
+    action register(tier: u8) {
+        require(users[caller].registered_at == 0, "already registered")
+        users[caller] = User {
+            registered_at: block.timestamp,
+            tier
+        }
+        total_users = total_users + 1
+    }
+}
+
+record StakingModule @storage_namespace("cov.staking.v2") {
+    field stakes: map<address, amount>
+
+    action stake(amount: amount) {
+        stakes[caller] = stakes[caller] + amount
+    }
+}

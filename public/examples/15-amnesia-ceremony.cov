@@ -1,0 +1,54 @@
+-- AmnesiaCeremony.cov · ERC-8228 cryptographic amnesia.
+-- A one-way MPC ceremony: contributors add entropy, the ceremony
+-- finalizes, and then the private material is provably destroyed via
+-- a Wesolowski VDF + keccak-bound destruction proof. Once `destroy` has
+-- run, the state machine can never return to idle. The language
+-- enforces the state progression; the precompiles at 0x124..0x127
+-- enforce the cryptography.
+
+ceremony AmnesiaCeremony {
+    field participants: map<address, bool>
+    field state: CeremonyState
+    field transcript: bytes
+    field destruction_proof: bytes
+
+    enum CeremonyState { Idle, Gathering, Finalized, Destroyed }
+
+    action setup() {
+        only deployer
+        require(state == CeremonyState::Idle, "already setup")
+        state = CeremonyState::Gathering
+    }
+
+    action contribute(entropy: bytes, proof: bytes) {
+        require(state == CeremonyState::Gathering, "not gathering")
+        require(!participants[caller], "already contributed")
+        participants[caller] = true
+        transcript = hash(transcript, entropy, caller)
+        emit Contributed(caller)
+    }
+
+    action finalize() {
+        only deployer
+        require(state == CeremonyState::Gathering, "not gathering")
+        state = CeremonyState::Finalized
+        emit Finalized(transcript)
+    }
+
+    -- @destroy is the language's one-way transition. The compiler
+    -- synthesizes the VDF-verify + keccak-bind call at precompiles
+    -- 0x124..0x127. After this runs successfully there is no path
+    -- back to any earlier state — the enum variant is terminal.
+    @destroy
+    action destroy(vdf_output: bytes, proof: bytes) {
+        only deployer
+        require(state == CeremonyState::Finalized, "not finalized")
+        destruction_proof = proof
+        state = CeremonyState::Destroyed
+        emit Destroyed(proof)
+    }
+
+    event Contributed(participant: address)
+    event Finalized(transcript: bytes)
+    event Destroyed(proof: bytes)
+}

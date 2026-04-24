@@ -1,0 +1,37 @@
+-- UniswapV4Hook.cov · lifecycle callbacks for a Uniswap V4 pool.
+-- Covenant represents each hook point as a distinct action; the
+-- compiler emits the V4 hook flag bitmap so the pool router knows
+-- which callbacks to invoke.
+
+@uniswap_hook(flags: [BEFORE_SWAP, AFTER_MODIFY_LIQUIDITY])
+record PoolGuard {
+    field pool_manager: address
+    field min_liquidity: amount
+
+    action before_swap(
+        sender: address,
+        key: bytes,
+        params: bytes,
+    )
+        only when caller == pool_manager
+    {
+        -- Reject swaps that would drop liquidity below the floor.
+        let current = get_liquidity(key)
+        require(current >= min_liquidity, "below floor")
+    }
+
+    action after_modify_liquidity(
+        sender: address,
+        key: bytes,
+        params: bytes,
+        delta: bytes,
+    )
+        only when caller == pool_manager
+    {
+        emit LiquidityModified(sender, delta)
+    }
+
+    helper get_liquidity(key: bytes) returns amount { /* ... */ 0 }
+
+    event LiquidityModified(sender: address, delta: bytes)
+}

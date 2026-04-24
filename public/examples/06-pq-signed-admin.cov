@@ -1,0 +1,21 @@
+-- PqSignedAdmin.cov · post-quantum-secured admin surface (ERC-8231).
+-- Admin actions require a Dilithium5 signature, not the usual ECDSA.
+-- Designed to survive Shor's algorithm on a cryptographically-relevant
+-- quantum computer. @pq_signed is verified by the precompile at 0x0131.
+
+record PqSignedAdmin {
+    field pq_admin_key: pq_key
+    field nonce: u64
+
+    @pq_signed(pq_admin_key)
+    action upgrade(new_implementation: address, sig: bytes) {
+        nonce = nonce + 1
+        -- The @pq_signed annotation causes the compiler to synthesize:
+        --   1. domain-separated message = hash(self, "upgrade", new_implementation, nonce)
+        --   2. STATICCALL(0x0131, pq_admin_key || msg || sig)  --> must return 1
+        -- before any user code runs. No way to bypass.
+        emit Upgraded(new_implementation)
+    }
+
+    event Upgraded(implementation: address)
+}

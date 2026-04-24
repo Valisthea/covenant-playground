@@ -1,0 +1,41 @@
+-- PrivateVoting.cov · ZK-verified eligibility + FHE-tallied ballots.
+-- Voters prove membership in an eligible set without revealing which
+-- member they are. Ballots are ciphertext; the tally is homomorphic.
+-- Only the final count is decrypted.
+
+ballot PrivateVoting {
+    field eligibility_root: hash        -- Merkle root of eligible voters
+    field nullifiers: map<hash, bool>   -- prevents double-voting
+    field tally_yes: encrypted<u64>
+    field tally_no:  encrypted<u64>
+    field deadline:  time
+
+    -- Caller proves inclusion in `eligibility_root` without revealing
+    -- their identity. `nullifier` is a deterministic but pseudonymous
+    -- tag derived from (identity, ballot_id) — prevents re-voting without
+    -- correlation across ballots.
+    @verified_by(zk)
+    action cast(
+        vote_enc: ciphertext,
+        nullifier: hash,
+        proof: bytes,
+    ) {
+        require(block.timestamp < deadline, "voting closed")
+        require(!nullifiers[nullifier], "already voted")
+
+        zk_verify(proof, [eligibility_root, nullifier, vote_enc])
+            or revert("invalid proof")
+
+        nullifiers[nullifier] = true
+
+        -- Ballot is either enc(1) (yes) or enc(0) (no); homomorphically
+        -- add to the appropriate counter. No-one learns which one.
+        tally_yes = fhe_add(tally_yes, vote_enc)
+        tally_no  = fhe_add(tally_no,  fhe_sub(fhe_encrypt(1), vote_enc))
+    }
+
+    reveal result returns (u64, u64) {
+        require(block.timestamp >= deadline, "too early")
+        (fhe_decrypt(tally_yes), fhe_decrypt(tally_no))
+    }
+}

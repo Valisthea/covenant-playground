@@ -1,0 +1,34 @@
+-- UupsUpgradeable.cov · EIP-1822 proxy pattern in Covenant.
+-- The upgrade logic lives in the implementation contract, not the proxy.
+-- One small risk: an implementation without an upgrade function bricks
+-- the proxy. The language forbids that — the compiler emits an error
+-- if an upgradeable_by record lacks an `upgrade` action.
+
+upgradeable_by MULTISIG
+record StakingV1 {
+    field total_staked: amount
+    field stakes: map<address, amount>
+
+    action stake(amount: amount) {
+        stakes[caller] = stakes[caller] + amount
+        total_staked = total_staked + amount
+    }
+
+    action unstake(amount: amount) {
+        require(stakes[caller] >= amount, "insufficient stake")
+        stakes[caller] = stakes[caller] - amount
+        total_staked = total_staked - amount
+    }
+
+    -- Required by `upgradeable_by`: who can replace the implementation?
+    -- Anything here emits a diagnostic (W402) if the guard is weaker
+    -- than the declared upgrade authority.
+    action upgrade(new_implementation: address) {
+        only when caller == MULTISIG
+        -- Compiler emits the SSTORE to the EIP-1967 implementation slot
+        sstore(EIP1967_IMPL_SLOT, new_implementation)
+        emit Upgraded(new_implementation)
+    }
+
+    event Upgraded(implementation: address)
+}
