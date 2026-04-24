@@ -6,9 +6,11 @@ import { AbiPane } from './AbiPane';
 import { IRPane } from './IRPane';
 import { DeployPanel } from '../Deploy/DeployPanel';
 import { TxHistoryPane } from '../Deploy/TxHistoryPane';
+import { PrivacyTab } from '../Privacy/PrivacyTab';
 import { getMockChain } from '../../lib/mockchain';
+import { analyzeSource } from '../../lib/source-analyzer';
 
-type Tab = 'diagnostics' | 'bytecode' | 'abi' | 'ir' | 'deploy' | 'txs';
+type Tab = 'diagnostics' | 'bytecode' | 'abi' | 'ir' | 'deploy' | 'txs' | 'privacy';
 
 export function Output() {
   const [tab, setTab] = useState<Tab>('diagnostics');
@@ -29,11 +31,13 @@ export function Output() {
     return { errorCount, warnCount };
   }, [diagnostics]);
 
+  const source = useStore((s) => s.source);
   const hasBytecode = !!result?.wasm || !!result?.bytecode;
   const hasAbi = !!result?.abi && result.abi.length > 0;
   const hasIr = !!result?.ir;
   const canDeploy = !!result?.ok;
   const txCount = getMockChain().txs.length;
+  const privacyHits = useMemo(() => analyzeSource(source).hits.length, [source]);
 
   return (
     <>
@@ -102,6 +106,19 @@ export function Output() {
           Txs
           {txCount > 0 && <span className="badge badge--neutral">{txCount}</span>}
         </button>
+        <button
+          role="tab"
+          aria-selected={tab === 'privacy'}
+          className={tab === 'privacy' ? 'active' : ''}
+          onClick={() => setTab('privacy')}
+          type="button"
+          title="Privacy flow + FHE/ZK/Amnesia sandboxes"
+        >
+          Privacy
+          {privacyHits > 0 && (
+            <span className="badge badge--neutral">{privacyHits}</span>
+          )}
+        </button>
 
         <div style={{ flex: 1 }} />
         <StatusBadge isCompiling={isCompiling} timing={result?.timing.total} lastAt={lastCompileAt} />
@@ -114,6 +131,7 @@ export function Output() {
         {tab === 'ir' && <IRPane />}
         {tab === 'deploy' && <DeployPanel />}
         {tab === 'txs' && <TxHistoryPane />}
+        {tab === 'privacy' && <PrivacyTab />}
       </div>
     </>
   );
