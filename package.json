@@ -1,7 +1,7 @@
 {
   "name": "covenant-playground",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.7.0",
   "type": "module",
   "description": "Browser-based Covenant playground — Monaco editor + in-browser compiler + MockChain + Sepolia deploy",
   "scripts": {
