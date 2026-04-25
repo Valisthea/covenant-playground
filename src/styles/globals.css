@@ -2047,3 +2047,178 @@ body {
 .tour-banner-dismiss:hover {
   opacity: 1;
 }
+
+/* ──────────────────────────────────────────────────────────────────
+   Sprint 24 — Sepolia / live target styling
+   ────────────────────────────────────────────────────────────────── */
+
+/* Red accent for the Sepolia target tab so the LIVE badge reads. */
+.deploy-target-seg__sepolia.active {
+  background: #DC3545;
+}
+
+.deploy-target-seg__live-badge {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 7pt;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  background: #DC3545;
+  color: #fff;
+  padding: 1px 5px;
+  border-radius: 2px;
+  margin-left: 6px;
+  vertical-align: 1px;
+}
+
+/* When the target tab is already active, the badge inverts so it
+   stays readable against the red background. */
+.deploy-target-seg__sepolia.active .deploy-target-seg__live-badge {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Red Deploy button for live targets. */
+.pg-btn--live {
+  background: #DC3545;
+  border-color: #DC3545;
+}
+
+.pg-btn--live:hover:not(:disabled) {
+  background: #b32a37;
+  border-color: #b32a37;
+}
+
+.pg-btn--live:disabled {
+  background: rgba(220, 53, 69, 0.4);
+  border-color: rgba(220, 53, 69, 0.4);
+  cursor: not-allowed;
+}
+
+/* Inline "on Sepolia" badge in card headers. */
+.deploy-card__chain-badge {
+  font-family: var(--font-mono);
+  font-size: 7pt;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  padding: 2px 6px;
+  border-radius: 2px;
+  margin-left: 8px;
+  text-transform: none;
+}
+.deploy-card__chain-badge--live {
+  background: rgba(220, 53, 69, 0.12);
+  color: #DC3545;
+  border: 1px solid rgba(220, 53, 69, 0.3);
+}
+
+/* Etherscan link in TxHistoryPane row header. */
+.tx-explorer-link {
+  font-family: var(--font-mono);
+  font-size: 9pt;
+  color: var(--accent);
+  text-decoration: none;
+  margin-left: auto;
+  padding: 0 4px;
+}
+.tx-explorer-link:hover {
+  text-decoration: underline;
+}
+
+/* Etherscan link in ContractList row. */
+.contract-row__explorer {
+  font-family: var(--font-mono);
+  font-size: 7.5pt;
+  color: var(--accent);
+  text-decoration: none;
+  padding: 2px 6px;
+  margin-left: auto;
+  align-self: center;
+  white-space: nowrap;
+}
+.contract-row__explorer:hover {
+  text-decoration: underline;
+}
+
+/* Wallet refresh icon button next to the panel title. */
+.wallet-refresh {
+  background: none;
+  border: 0;
+  color: var(--ink-faint);
+  font-size: 11pt;
+  margin-left: 8px;
+  cursor: pointer;
+  vertical-align: -1px;
+}
+.wallet-refresh:hover {
+  color: var(--accent);
+}
+
+/* Mainnet block — high-contrast warning. */
+.wallet-mainnet-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  margin: 8px 0 12px;
+  border: 1px solid #DC3545;
+  background: rgba(220, 53, 69, 0.08);
+  font-size: 9pt;
+  line-height: 1.45;
+  color: var(--ink);
+  border-radius: 3px;
+}
+.wallet-mainnet-block strong {
+  color: #DC3545;
+}
+
+/* Mainnet net-badge for the Network row in WalletPanel. */
+.net-badge--danger {
+  background: #DC3545;
+  color: #fff;
+  padding: 2px 6px;
+  border-radius: 2px;
+  font-family: var(--font-mono);
+  font-size: 7.5pt;
+  letter-spacing: 0.06em;
+}
+
+/* Faucet hint block — appears when balance is zero. */
+.wallet-faucet-hint {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: var(--paper-alt);
+  border-left: 2px solid var(--accent);
+  font-size: 9pt;
+  line-height: 1.5;
+}
+.wallet-faucet-hint p {
+  margin: 0 0 6px;
+}
+.wallet-faucet-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 6px;
+}
+.wallet-faucet-list li {
+  margin-bottom: 2px;
+}
+.wallet-faucet-list a {
+  font-family: var(--font-mono);
+  font-size: 8.5pt;
+  color: var(--accent);
+}
+.wallet-faucet-tip {
+  font-size: 8pt;
+  color: var(--ink-faint);
+  margin-top: 4px;
+}
+
+.interaction-pending {
+  font-family: var(--font-mono);
+  font-size: 8.5pt;
+  color: #DC3545;
+  background: rgba(220, 53, 69, 0.06);
+  padding: 6px 10px;
+  margin: 8px 0;
+  border-left: 2px solid #DC3545;
+}

@@ -1,17 +1,22 @@
 import { useStore } from '../../lib/store';
-import { getMockChain, shortAddress, type TxReceipt } from '../../lib/mockchain';
+import { shortAddress, type TxReceipt } from '../../lib/mockchain';
+import { etherscanTxUrl } from '../../lib/wallet';
 
 /**
- * Dedicated pane showing the MockChain transaction log, newest first.
+ * Dedicated pane showing the active target's transaction log, newest
+ * first. Sprint 24 made this target-aware: switch the chain target and
+ * the list re-renders against MockChain or Sepolia accordingly.
  */
 export function TxHistoryPane() {
   useStore((s) => s.chainRev);
-  const txs = getMockChain().txs;
+  const target = useStore((s) => s.target);
+  const getTxs = useStore((s) => s.getTxs);
+  const txs = getTxs();
 
   if (txs.length === 0) {
     return (
       <div className="pane-empty">
-        <p>No transactions yet.</p>
+        <p>No transactions yet on {target === 'sepolia' ? 'Sepolia' : 'MockChain'}.</p>
         <p className="pane-empty__sub">
           Deploy a contract or call an action to populate the history.
         </p>
@@ -21,17 +26,21 @@ export function TxHistoryPane() {
 
   return (
     <div className="tx-list">
-      {txs.map((tx) => (
-        <TxRow key={tx.hash} tx={tx} />
+      {txs.map((tx, i) => (
+        <TxRow key={tx.hash + ':' + i} tx={tx} target={target} />
       ))}
     </div>
   );
 }
 
-function TxRow({ tx }: { tx: TxReceipt }) {
+function TxRow({ tx, target }: { tx: TxReceipt; target: 'mockchain' | 'sepolia' }) {
   const statusClass = tx.status === 'success' ? 'tx-ok' : 'tx-bad';
   const kindLabel =
     tx.kind === 'deploy' ? 'deploy' : tx.kind === 'view' ? 'view' : 'call';
+
+  // Sprint 24: real Sepolia tx hashes link out to Etherscan. MockChain
+  // hashes are synthetic and don't link anywhere.
+  const explorerUrl = target === 'sepolia' && tx.kind !== 'view' ? etherscanTxUrl(tx.hash) : null;
 
   return (
     <article className={`tx-row ${statusClass}`}>
@@ -42,6 +51,18 @@ function TxRow({ tx }: { tx: TxReceipt }) {
         </code>
         <span className="tx-block">#{tx.blockNumber}</span>
         <span className="tx-status">{tx.status}</span>
+        {explorerUrl && (
+          <a
+            href={explorerUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="tx-explorer-link"
+            title="View on Sepolia Etherscan"
+            aria-label="View on Sepolia Etherscan"
+          >
+            ↗
+          </a>
+        )}
       </header>
 
       <dl className="tx-meta">

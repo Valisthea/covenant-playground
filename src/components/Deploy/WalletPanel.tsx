@@ -1,18 +1,21 @@
+import { formatEther } from 'ethers';
+
 import { useStore } from '../../lib/store';
 import { hasInjectedWallet, switchToSepolia } from '../../lib/wallet';
-import { formatEther } from 'ethers';
 import { shortAddress } from '../../lib/mockchain';
 
 /**
- * Sepolia panel. Today it connects the wallet and displays balance;
- * the actual deploy call returns a structured error because the EVM
- * backend isn't wired yet (see wallet.ts `deployToSepolia`).
+ * Sepolia panel. Sprint 24 wired the real `eth_sendTransaction` flow,
+ * so this card is no longer a stub: it shows the connected wallet,
+ * surfaces network mismatches (with a hard-blocking warning if the user
+ * is on mainnet), and links out to faucets when balance is zero.
  */
 export function WalletPanel() {
   const wallet = useStore((s) => s.wallet);
   const isConnecting = useStore((s) => s.isConnectingWallet);
   const walletError = useStore((s) => s.walletError);
   const connect = useStore((s) => s.connectWallet);
+  const refresh = useStore((s) => s.refreshWallet);
 
   if (!hasInjectedWallet()) {
     return (
@@ -57,9 +60,41 @@ export function WalletPanel() {
     );
   }
 
+  const isZeroBalance = wallet.balanceWei !== null && wallet.balanceWei === 0n;
+
   return (
     <section className="deploy-card wallet-card">
-      <h3 className="deploy-card__title">Sepolia</h3>
+      <h3 className="deploy-card__title">
+        Sepolia
+        <button
+          type="button"
+          className="wallet-refresh"
+          onClick={() => void refresh()}
+          title="Refresh wallet state"
+          aria-label="Refresh balance"
+        >
+          ↻
+        </button>
+      </h3>
+
+      {/* Sprint 24 — hard-block mainnet detection. The deploy action
+          itself refuses to broadcast on chain 0x1; this banner surfaces
+          the situation up-front instead of waiting for the user to click. */}
+      {wallet.isMainnet && (
+        <div className="wallet-mainnet-block" role="alert">
+          <strong>⚠ Mainnet detected.</strong> The playground refuses to
+          deploy to Ethereum mainnet. Switch your wallet to Sepolia. For
+          production deploys use the Covenant CLI.
+          <button
+            type="button"
+            className="pg-btn pg-btn--ghost"
+            onClick={() => void switchToSepolia().then(() => void refresh())}
+          >
+            Switch to Sepolia
+          </button>
+        </div>
+      )}
+
       <dl className="chain-meta">
         <dt>Address</dt>
         <dd title={wallet.address}>
@@ -75,6 +110,8 @@ export function WalletPanel() {
         <dd>
           {wallet.isSepolia ? (
             <span className="net-badge net-badge--ok">Sepolia</span>
+          ) : wallet.isMainnet ? (
+            <span className="net-badge net-badge--danger">Mainnet (blocked)</span>
           ) : (
             <span className="net-badge net-badge--warn">
               wrong network (chainId {wallet.chainId})
@@ -83,21 +120,59 @@ export function WalletPanel() {
         </dd>
       </dl>
 
-      {!wallet.isSepolia && (
+      {!wallet.isSepolia && !wallet.isMainnet && (
         <button
           type="button"
           className="pg-btn pg-btn--ghost"
-          onClick={() => void switchToSepolia().then(() => void connect())}
+          onClick={() => void switchToSepolia().then(() => void refresh())}
         >
           Switch to Sepolia
         </button>
       )}
 
-      <p className="wallet-notice">
-        Sepolia deploy is stubbed in Tier 2: Covenant's compiler currently
-        emits WASM, not EVM bytecode. The EVM backend bridge lands in Tier 3.
-        Use <strong>MockChain</strong> to iterate today.
-      </p>
+      {/* Sprint 24 — faucet hint when balance is zero. The deploy
+          preflight will refuse, but giving the user the path forward
+          avoids the "I clicked Deploy and got an error" dead end. */}
+      {wallet.isSepolia && isZeroBalance && (
+        <div className="wallet-faucet-hint">
+          <p>
+            <strong>Sepolia balance is zero.</strong> Get test ETH from a
+            public faucet to deploy:
+          </p>
+          <ul className="wallet-faucet-list">
+            <li>
+              <a
+                href="https://sepoliafaucet.com"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                sepoliafaucet.com
+              </a>
+            </li>
+            <li>
+              <a
+                href="https://www.alchemy.com/faucets/ethereum-sepolia"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Alchemy faucet
+              </a>
+            </li>
+            <li>
+              <a
+                href="https://www.infura.io/faucet/sepolia"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Infura faucet
+              </a>
+            </li>
+          </ul>
+          <p className="wallet-faucet-tip">
+            After topping up, click ↻ to refresh.
+          </p>
+        </div>
+      )}
     </section>
   );
 }

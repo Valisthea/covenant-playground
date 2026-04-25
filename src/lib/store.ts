@@ -11,10 +11,15 @@ import {
   type TxReceipt,
   type DeployedContract,
 } from './mockchain';
+import { Interface } from 'ethers';
 import {
+  callOnSepolia,
   connectWallet,
   deployToSepolia,
+  etherscanTxUrl,
   hasInjectedWallet,
+  refreshWalletState,
+  staticCallOnSepolia,
   type WalletState,
 } from './wallet';
 
@@ -48,6 +53,20 @@ interface State {
   wallet: WalletState | null;
   walletError: string | null;
   isConnectingWallet: boolean;
+
+  // --- Sepolia per-target storage (Sprint 24) ---
+  /**
+   * Contracts deployed via the Sepolia target. Kept separately from
+   * MockChain (which lives in WASM memory) so the active-target
+   * selectors can return one or the other without merging.
+   */
+  sepoliaContracts: DeployedContract[];
+  sepoliaTxs: TxReceipt[];
+  /** Hash + Etherscan URL of the in-flight Sepolia tx, if any. Drives
+   *  the PendingTxBanner. Cleared once the receipt resolves. */
+  pendingSepoliaTx: { hash: string; explorerUrl: string; kind: 'deploy' | 'call' } | null;
+  /** Spinner state for Sepolia state-mutating calls. */
+  isCallingSepolia: boolean;
 
   // --- Inspector (Sprint 20) ---
   /** 'simple' = editor + output, 'inspect' = editor + inspector + output. */
@@ -96,12 +115,17 @@ interface State {
   setActiveContract: (addr: Address | null) => void;
   deploy: () => Promise<TxReceipt | null>;
   callAction: (action: string, args: unknown[]) => TxReceipt | null;
+  /** Sprint 24 — async Sepolia call. Routed automatically by `callAction`
+   *  when `target === 'sepolia'`. Exposed publicly for components that
+   *  want explicit control (Tour runtime validators, smoke tests). */
+  callActionOnSepolia: (action: string, args: unknown[]) => Promise<void>;
   resetChain: () => void;
   mineBlocks: (n: number) => void;
   advanceTime: (seconds: number) => void;
 
   // --- Wallet actions ---
   connectWallet: () => Promise<void>;
+  refreshWallet: () => Promise<void>;
   deployToSepolia: () => Promise<void>;
 
   // --- Derived (computed on read) ---
@@ -149,6 +173,12 @@ export const useStore = create<State>((set, get) => ({
   wallet: null,
   walletError: null,
   isConnectingWallet: false,
+
+  // Sprint 24 — per-target storage (Sepolia)
+  sepoliaContracts: [],
+  sepoliaTxs: [],
+  pendingSepoliaTx: null,
+  isCallingSepolia: false,
 
   // Inspector defaults
   layoutMode: 'simple',
@@ -343,11 +373,20 @@ export const useStore = create<State>((set, get) => ({
   },
 
   callAction: (action, args) => {
-    const { activeContract } = get();
+    const { activeContract, target } = get();
     if (!activeContract) {
       set({ deployError: 'No deployed contract selected.' });
       return null;
     }
+
+    // Sepolia path: route through MetaMask. Returns null synchronously
+    // because the call is async; the receipt lands in `sepoliaTxs` and
+    // the UI re-renders via the chainRev bump.
+    if (target === 'sepolia') {
+      void get().callActionOnSepolia(action, args);
+      return null;
+    }
+
     try {
       const receipt = getMockChain().call(activeContract, action, args);
       set((s) => ({ chainRev: s.chainRev + 1 }));
@@ -356,6 +395,118 @@ export const useStore = create<State>((set, get) => ({
       const err = e as Error;
       set({ deployError: err.message });
       return null;
+    }
+  },
+
+  /**
+   * Sprint 24 — call a state-mutating action on a Sepolia-deployed
+   * contract. Encodes calldata via the cached ABI, opens MetaMask,
+   * waits for the receipt, appends to `sepoliaTxs`.
+   *
+   * Views (`stateMutability === 'view' | 'pure'`) route through
+   * `eth_call` (free, no wallet popup) and decode the return value
+   * via `Interface.decodeFunctionResult`.
+   */
+  callActionOnSepolia: async (action: string, args: unknown[]) => {
+    const { activeContract, sepoliaContracts, wallet } = get();
+    if (!activeContract) {
+      set({ deployError: 'No deployed contract selected.' });
+      return;
+    }
+    const contract = sepoliaContracts.find(
+      (c) => c.address.toLowerCase() === activeContract.toLowerCase(),
+    );
+    if (!contract) {
+      set({ deployError: 'Contract not in Sepolia registry.' });
+      return;
+    }
+    if (!wallet || !wallet.address) {
+      set({ deployError: 'Connect your wallet first.' });
+      return;
+    }
+
+    let iface: Interface;
+    let calldata: string;
+    let isView: boolean;
+    try {
+      iface = new Interface(contract.abi as readonly unknown[] as []);
+      const fn = iface.getFunction(action);
+      if (!fn) {
+        set({ deployError: `Action "${action}" not in ABI.` });
+        return;
+      }
+      isView = fn.stateMutability === 'view' || fn.stateMutability === 'pure';
+      calldata = iface.encodeFunctionData(action, args);
+    } catch (e) {
+      set({ deployError: `ABI encode failed: ${(e as Error).message}` });
+      return;
+    }
+
+    set({ isCallingSepolia: true, deployError: null });
+
+    if (isView) {
+      // eth_call — free, fast, no popup.
+      try {
+        const r = await staticCallOnSepolia(wallet.address, activeContract, calldata);
+        const receipt: TxReceipt = {
+          hash: '0x' + '0'.repeat(64),
+          blockNumber: 0,
+          timestamp: Math.floor(Date.now() / 1000),
+          from: wallet.address as Address,
+          to: activeContract,
+          kind: 'view',
+          action,
+          args,
+          gasUsed: 0n,
+          status: r.ok ? 'success' : 'reverted',
+          revertReason: r.ok ? undefined : r.revertReason,
+          events: [],
+        };
+        if (r.ok && r.returnDataHex && r.returnDataHex !== '0x') {
+          try {
+            const decoded = iface.decodeFunctionResult(action, r.returnDataHex);
+            receipt.returnValue = decoded.length === 1 ? decoded[0] : decoded;
+          } catch {
+            receipt.returnValue = r.returnDataHex;
+          }
+        }
+        set((s) => ({
+          isCallingSepolia: false,
+          sepoliaTxs: [receipt, ...s.sepoliaTxs],
+          chainRev: s.chainRev + 1,
+        }));
+      } catch (e) {
+        set({ isCallingSepolia: false, deployError: (e as Error).message });
+      }
+      return;
+    }
+
+    // State-mutating call — MetaMask popup, 12-30s wait.
+    try {
+      const r = await callOnSepolia(activeContract, calldata, 0n);
+      const receipt: TxReceipt = {
+        hash: r.txHash,
+        blockNumber: r.blockNumber,
+        timestamp: Math.floor(Date.now() / 1000),
+        from: wallet.address as Address,
+        to: activeContract,
+        kind: 'call',
+        action,
+        args,
+        gasUsed: r.gasUsed,
+        status: r.status,
+        events: [],
+      };
+      set((s) => ({
+        isCallingSepolia: false,
+        pendingSepoliaTx: null,
+        sepoliaTxs: [receipt, ...s.sepoliaTxs],
+        chainRev: s.chainRev + 1,
+      }));
+      // Refresh balance after gas spend.
+      void get().refreshWallet();
+    } catch (e) {
+      set({ isCallingSepolia: false, pendingSepoliaTx: null, deployError: (e as Error).message });
     }
   },
 
@@ -400,34 +551,106 @@ export const useStore = create<State>((set, get) => ({
     }
   },
 
+  refreshWallet: async () => {
+    const { wallet } = get();
+    if (!wallet?.address) return;
+    try {
+      const fresh = await refreshWalletState(wallet.address);
+      set({ wallet: fresh });
+    } catch (e) {
+      // Silent — refresh is best-effort.
+      console.debug('[wallet] refresh failed:', e);
+    }
+  },
+
+  /**
+   * Sprint 24 — real Sepolia deploy.
+   *
+   * On success, the contract is appended to `sepoliaContracts`, the
+   * deploy receipt to `sepoliaTxs`, and `activeContract` is updated so
+   * the InteractionPanel surfaces the new contract immediately.
+   */
   deployToSepolia: async () => {
-    const { compileResult, wallet } = get();
+    const { compileResult, wallet, currentFile } = get();
     if (!wallet || !wallet.address) {
       set({ deployError: 'Connect your wallet first.' });
       return;
     }
-    if (!wallet.isSepolia) {
-      set({ deployError: 'Switch the wallet network to Sepolia first.' });
+    if (wallet.isMainnet) {
+      set({
+        deployError: 'Mainnet detected — playground refuses mainnet deploys. Switch to Sepolia.',
+      });
       return;
     }
     if (!compileResult || !compileResult.ok) {
       set({ deployError: 'Compile cleanly before deploying.' });
       return;
     }
+    if (!compileResult.bytecode) {
+      set({ deployError: 'Compile result has no bytecode.' });
+      return;
+    }
+
+    set({ isDeploying: true, deployError: null });
     try {
-      await deployToSepolia(compileResult.bytecode, compileResult.abi);
+      const r = await deployToSepolia(compileResult.bytecode, compileResult.abi);
+
+      const name = currentFile.replace(/\.cov$/, '');
+      const contract: DeployedContract = {
+        address: r.contractAddress as Address,
+        deployer: r.from as Address,
+        deployedAt: r.blockNumber,
+        abi: (compileResult.abi as DeployedContract['abi']) ?? [],
+        storage: {},
+        name,
+        runtimeBytecodeSize: compileResult.bytecode.length / 2 - 1,
+      };
+      const receipt: TxReceipt = {
+        hash: r.txHash,
+        blockNumber: r.blockNumber,
+        timestamp: Math.floor(Date.now() / 1000),
+        from: r.from as Address,
+        to: r.contractAddress as Address,
+        kind: 'deploy',
+        gasUsed: r.gasUsed,
+        status: 'success',
+        events: [],
+      };
+
+      set((s) => ({
+        isDeploying: false,
+        pendingSepoliaTx: null,
+        sepoliaContracts: [...s.sepoliaContracts, contract],
+        sepoliaTxs: [receipt, ...s.sepoliaTxs],
+        activeContract: contract.address,
+        chainRev: s.chainRev + 1,
+      }));
+      // Refresh balance after gas spend.
+      void get().refreshWallet();
     } catch (e) {
       const err = e as Error;
-      set({ deployError: err.message });
+      set({ isDeploying: false, pendingSepoliaTx: null, deployError: err.message });
     }
   },
 
   // -------------------------------------------------------------------------
-  // Derived selectors — read-through to MockChain singleton
+  // Derived selectors — target-aware (Sprint 24)
   // -------------------------------------------------------------------------
 
-  getDeployedContracts: () =>
-    Array.from(getMockChain().contracts.values()),
+  getDeployedContracts: () => {
+    const { target, sepoliaContracts } = get();
+    if (target === 'sepolia') return sepoliaContracts;
+    return Array.from(getMockChain().contracts.values());
+  },
 
-  getTxs: () => getMockChain().txs,
+  getTxs: () => {
+    const { target, sepoliaTxs } = get();
+    if (target === 'sepolia') return sepoliaTxs;
+    return getMockChain().txs;
+  },
 }));
+
+// Re-export the etherscan helper so components can import it from the
+// store rather than reaching into wallet.ts directly. Keeps the layering
+// honest — wallet.ts is the bottom of the stack, components stay above.
+export { etherscanTxUrl as etherscanTxUrlFor };

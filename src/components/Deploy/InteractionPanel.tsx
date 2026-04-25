@@ -1,23 +1,28 @@
 import { useState } from 'react';
 import { useStore } from '../../lib/store';
 import {
-  getMockChain,
   shortAddress,
   type AbiFunction,
   type TxReceipt,
 } from '../../lib/mockchain';
 
 /**
- * Per-action input form. Inputs are stored as raw strings; MockChain
- * doesn't parse them today (the stub ABI has no input schema). When
- * real ABI types come online this becomes a typed decoder.
+ * Per-action input form. Sprint 24 made this target-aware: the active
+ * contract is resolved via the store's `getDeployedContracts` selector
+ * so the same panel works against MockChain or Sepolia. The actual
+ * call dispatch happens in `callAction` / `callActionOnSepolia`.
  */
 export function InteractionPanel() {
   useStore((s) => s.chainRev);
   const activeContract = useStore((s) => s.activeContract);
+  const target = useStore((s) => s.target);
+  const isCallingSepolia = useStore((s) => s.isCallingSepolia);
+  const getDeployedContracts = useStore((s) => s.getDeployedContracts);
 
   if (!activeContract) return null;
-  const contract = getMockChain().contracts.get(activeContract);
+  const contract = getDeployedContracts().find(
+    (c) => c.address.toLowerCase() === activeContract.toLowerCase(),
+  );
   if (!contract) return null;
 
   const views = contract.abi.filter(
@@ -36,12 +41,18 @@ export function InteractionPanel() {
         at <code>{shortAddress(contract.address)}</code>
       </p>
 
+      {target === 'sepolia' && isCallingSepolia && (
+        <div className="interaction-pending">
+          Awaiting MetaMask + 1 confirmation… (~30s)
+        </div>
+      )}
+
       {mutating.length > 0 && (
         <>
           <h4 className="interaction-section">Actions</h4>
           <div className="interaction-list">
             {mutating.map((fn) => (
-              <ActionRow key={fn.name} fn={fn} />
+              <ActionRow key={fn.name} fn={fn} target={target} />
             ))}
           </div>
         </>
@@ -52,7 +63,7 @@ export function InteractionPanel() {
           <h4 className="interaction-section">Views</h4>
           <div className="interaction-list">
             {views.map((fn) => (
-              <ActionRow key={fn.name} fn={fn} isView />
+              <ActionRow key={fn.name} fn={fn} target={target} isView />
             ))}
           </div>
         </>
@@ -61,7 +72,15 @@ export function InteractionPanel() {
   );
 }
 
-function ActionRow({ fn, isView }: { fn: AbiFunction; isView?: boolean }) {
+function ActionRow({
+  fn,
+  isView,
+  target,
+}: {
+  fn: AbiFunction;
+  isView?: boolean;
+  target: 'mockchain' | 'sepolia';
+}) {
   const callAction = useStore((s) => s.callAction);
   const [args, setArgs] = useState<string>('');
   const [lastResult, setLastResult] = useState<TxReceipt | null>(null);
@@ -71,8 +90,16 @@ function ActionRow({ fn, isView }: { fn: AbiFunction; isView?: boolean }) {
       ? args.split(',').map((s) => s.trim())
       : [];
     const receipt = callAction(fn.name, parsed);
+    // Sepolia returns null synchronously (the receipt arrives via the
+    // store's chainRev bump). MockChain returns the receipt directly.
     if (receipt) setLastResult(receipt);
   };
+
+  const buttonClass = isView
+    ? 'pg-btn pg-btn--ghost pg-btn--sm'
+    : target === 'sepolia'
+      ? 'pg-btn pg-btn--primary pg-btn--live pg-btn--sm'
+      : 'pg-btn pg-btn--primary pg-btn--sm';
 
   return (
     <div className="action-row">
@@ -80,10 +107,10 @@ function ActionRow({ fn, isView }: { fn: AbiFunction; isView?: boolean }) {
         <code className="action-row__name">{fn.name}</code>
         <button
           type="button"
-          className={`pg-btn ${isView ? 'pg-btn--ghost' : 'pg-btn--primary'} pg-btn--sm`}
+          className={buttonClass}
           onClick={onCall}
         >
-          {isView ? 'Query' : 'Call'}
+          {isView ? 'Query' : target === 'sepolia' ? 'Call (Sepolia)' : 'Call'}
         </button>
       </div>
       <input
