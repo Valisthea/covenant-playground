@@ -2,7 +2,8 @@ import { useSyncExternalStore } from 'react';
 import { getTheme, setTheme, type Theme } from '../../lib/theme';
 
 /**
- * Three-state theme toggle: Light → Dark → System → … (cycle).
+ * Three-state theme toggle: Dark → Light → System → … (cycle).
+ * Dark is the default for first-time visitors, so the cycle starts there.
  * Shown as a compact icon button in the header; tooltip exposes the
  * current mode and the next click target.
  */
@@ -10,7 +11,7 @@ export function ThemeToggle() {
   const theme = useSyncExternalStore(subscribeTheme, getTheme, getTheme);
 
   const next: Theme =
-    theme === 'light' ? 'dark' : theme === 'dark' ? 'system' : 'light';
+    theme === 'dark' ? 'light' : theme === 'light' ? 'system' : 'dark';
 
   const icon =
     theme === 'light' ? (

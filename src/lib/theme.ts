@@ -4,7 +4,9 @@
  * from main.tsx so there's no flash of light content for users who
  * previously chose dark.
  *
- * Storage key: `cov-theme` → 'light' | 'dark' | 'system' (default).
+ * Storage key: `cov-theme` → 'light' | 'dark' | 'system'.
+ * Default for first-time visitors: 'dark' (cyberpunk-y, matches the rest
+ * of the Covenant brand). Users can switch to light or follow the OS.
  * The toggle in Header.tsx calls setTheme() below.
  */
 
@@ -13,10 +15,10 @@ export type Theme = 'light' | 'dark' | 'system';
 const STORAGE_KEY = 'cov-theme';
 
 export function getTheme(): Theme {
-  if (typeof localStorage === 'undefined') return 'system';
+  if (typeof localStorage === 'undefined') return 'dark';
   const raw = localStorage.getItem(STORAGE_KEY);
   if (raw === 'light' || raw === 'dark' || raw === 'system') return raw;
-  return 'system';
+  return 'dark';
 }
 
 export function setTheme(t: Theme): void {
@@ -26,7 +28,7 @@ export function setTheme(t: Theme): void {
 
 export function getEffective(theme: Theme): 'light' | 'dark' {
   if (theme !== 'system') return theme;
-  if (typeof window === 'undefined' || !window.matchMedia) return 'light';
+  if (typeof window === 'undefined' || !window.matchMedia) return 'dark';
   return window.matchMedia('(prefers-color-scheme: dark)').matches
     ? 'dark'
     : 'light';
