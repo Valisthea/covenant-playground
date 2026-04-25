@@ -323,6 +323,11 @@
   flex: 1;
   min-height: 0;
   overflow: hidden;
+  /* Must be a flex container so the inner .editor-frame (flex:1) can
+   * stretch to fill — otherwise Monaco collapses to ~0 height and the
+   * editor silently rejects focus/typing. */
+  display: flex;
+  flex-direction: column;
 }
 
 /* ── Lesson instructions ──────────────────────────────────── */
@@ -555,6 +560,158 @@
   font-size: 8.5pt;
   color: var(--ink-mute);
   margin: 0;
+}
+
+/* ── Live compiler diagnostics inside the validation panel ─────────── */
+.lesson-diagnostics {
+  border: 1px solid var(--rule-faint);
+  border-radius: 6px;
+  background: var(--paper);
+  padding: 8px 10px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.lesson-diagnostics-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.lesson-diagnostics-title {
+  font-family: var(--font-mono);
+  font-size: 7.5pt;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+}
+
+.lesson-diagnostics-counts {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lesson-diag-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--font-mono);
+  font-size: 7.5pt;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-weight: 500;
+}
+
+.lesson-diag-count--error {
+  background: rgba(220, 38, 38, 0.12);
+  color: var(--danger, #dc2626);
+}
+
+.lesson-diag-count--warn {
+  background: rgba(202, 138, 4, 0.14);
+  color: #ca8a04;
+}
+
+.lesson-diag-count--info {
+  background: rgba(14, 165, 233, 0.12);
+  color: var(--info, #0ea5e9);
+}
+
+.lesson-diagnostics-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.lesson-diag {
+  display: grid;
+  grid-template-columns: auto auto auto 1fr;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 8.5pt;
+  line-height: 1.45;
+  padding: 3px 4px;
+  border-radius: 3px;
+  border-left: 2px solid transparent;
+}
+
+.lesson-diag--error {
+  border-left-color: var(--danger, #dc2626);
+  color: var(--ink);
+}
+
+.lesson-diag--warning {
+  border-left-color: #ca8a04;
+  color: var(--ink);
+}
+
+.lesson-diag--info {
+  border-left-color: var(--info, #0ea5e9);
+  color: var(--ink-mute);
+}
+
+.lesson-diag-icon {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.lesson-diag--error .lesson-diag-icon { color: var(--danger, #dc2626); }
+.lesson-diag--warning .lesson-diag-icon { color: #ca8a04; }
+.lesson-diag--info .lesson-diag-icon { color: var(--info, #0ea5e9); }
+
+.lesson-diag-loc {
+  font-family: var(--font-mono);
+  font-size: 7.5pt;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+
+.lesson-diag-code {
+  font-family: var(--font-mono);
+  font-size: 7.5pt;
+  background: var(--paper-alt);
+  border: 1px solid var(--rule-faint);
+  border-radius: 3px;
+  padding: 0 4px;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.lesson-diag-msg {
+  font-family: var(--font-sans);
+  font-size: 8.5pt;
+  word-break: break-word;
+}
+
+.lesson-diag--more {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 7.5pt;
+  color: var(--ink-faint);
+  padding: 4px 4px 0;
+  border-left: none;
+}
+
+.lesson-diagnostics-clean {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 7.5pt;
+  color: var(--success, #16a34a);
+  margin: 0;
+  padding: 2px 0;
 }
 
 /* ── Navigation bar ───────────────────────────────────────── */
