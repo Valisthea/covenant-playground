@@ -30,7 +30,12 @@ yarn-error.log*
 # Vercel
 .vercel
 
-# WASM build output (dropped here by `wasm-pack build` from covenant-src)
-public/covenant-wasm/
+# WASM build output is COMMITTED (the playground deploys from git, and
+# the Vercel build environment has no Rust toolchain to regenerate it).
+# Sprint 22 Phase 5 will replace this manual commit with an automated
+# PR opened by the compiler repo's CI on each tag.
+#
+# Do NOT add public/covenant-wasm/ here — every release of the
+# playground bumps the bundle alongside the source.
 
 .vercel

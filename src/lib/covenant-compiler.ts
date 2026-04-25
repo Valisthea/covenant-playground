@@ -1,35 +1,31 @@
 /**
- * Thin TypeScript wrapper around the `covenant-wasm-bindings` npm module.
+ * Thin TypeScript wrapper around the `covenant-wasm-bindings` module
+ * shipped under `public/covenant-wasm/`.
  *
- * The real module is produced by running:
+ * Sprint 22 wired the real compiler in: `compile_to_evm`, `check`,
+ * `compile_to_ir_text`. This wrapper translates the binding's wire
+ * shape (snake_case JsCompileResult, JsDiagnostic) into the
+ * playground's `CompileResult` / `Diagnostic` types so every consumer
+ * (Editor, Output, Inspector, Tour, Examples) keeps working without
+ * its own per-component patch.
  *
- *   wasm-pack build --target web \
- *     --out-dir ../../../covenant-playground/public/covenant-wasm \
- *     covenant-src/crates/covenant-wasm-bindings
- *
- * Until that output exists the wrapper operates in STUB MODE and
- * synthesizes CompileResult objects so the IDE's UI pipeline (Monaco
- * markers, output panes, compile-on-save) is fully exercisable without
- * a working WASM toolchain. Flip `USE_STUB_COMPILER` to `false` once
- * the real module is in place.
- *
- * The live binding surface (from `covenant-wasm-bindings/src/lib.rs`):
- *
- *   export function compile_source(source: string): {
- *     ok: boolean;
- *     wasm: Uint8Array | null;
- *     metadata: string | null;           // JSON string, parsed client-side
- *     diagnostics: {
- *       level: 'error' | 'warning' | 'note';
- *       code: number;
- *       message: string;
- *       span_start: number;
- *       span_end: number;
- *     }[];
- *   }
+ * The stub heuristics from the pre-Sprint-22 codebase are preserved as
+ * a fallback path: if the WASM bundle fails to load (e.g. a serving
+ * misconfig in CI, an IPV6-only proxy stripping `.wasm` MIME), the
+ * playground degrades to the heuristic compiler instead of going dark.
+ * Flip `FORCE_STUB` to `true` to opt into the stub deliberately for
+ * local debugging.
  */
 
-export const USE_STUB_COMPILER = true;
+export const FORCE_STUB = false;
+
+/**
+ * Pre-Sprint-22 name kept as a public re-export so the rest of the
+ * codebase doesn't break. `true` ⇔ we're running on the heuristic
+ * stub (either by `FORCE_STUB` or because the WASM bundle failed to
+ * load). Components can branch on this to hide bytecode-dependent UI.
+ */
+export let USE_STUB_COMPILER = FORCE_STUB;
 
 import { synthesizeSourceMap, type SourceMap } from './source-map';
 export type { SourceMap, InstructionMapping, SourceMapStats } from './source-map';
@@ -85,32 +81,71 @@ export interface CompileResult {
   sourceMap: SourceMap | null;
 }
 
+/**
+ * Sprint 22 binding shape — see `covenant-wasm-bindings/covenant_wasm_bindings.d.ts`
+ * for the source of truth. Mirrored here so the wrapper can be type-checked
+ * without the bundle present at TS compile time.
+ */
+interface WasmDiagnostic {
+  level: 'error' | 'warning' | 'info';
+  code: string;
+  message: string;
+  help: string | null;
+  line: number;
+  column: number;
+  end_line: number;
+  end_column: number;
+  span_start: number;
+  span_end: number;
+}
+
+interface WasmCompileResult {
+  ok: boolean;
+  target: 'evm';
+  deploy_bytecode: string | null;
+  runtime_bytecode: string | null;
+  abi: string | null; // JSON-encoded ABI array
+  function_selectors: { name: string; selector: string }[];
+  storage_layout: unknown[];
+  metadata: {
+    covenant_version: string;
+    optimizer_config: string;
+    evm_version: string;
+    erc_versions: Record<string, string>;
+    precompile_abi_version: number;
+  } | null;
+  source_map: { mappings: { pc: number; source_line: number; source_column: number; instr_kind: string }[] } | null;
+  diagnostics: WasmDiagnostic[];
+  timing: { total: number };
+}
+
 interface WasmBinding {
-  compile_source(source: string): {
-    ok: boolean;
-    wasm: Uint8Array | null;
-    metadata: string | null;
-    diagnostics: {
-      level: 'error' | 'warning' | 'note';
-      code: number;
-      message: string;
-      span_start: number;
-      span_end: number;
-    }[];
-  };
+  default(input?: RequestInfo | URL): Promise<unknown>;
   version(): string;
+  compile_to_evm(source: string): WasmCompileResult;
+  check(source: string): { diagnostics: WasmDiagnostic[]; timing: { total: number } };
+  compile_to_ir_text(source: string): { ok: boolean; ir_text: string | null; diagnostics: WasmDiagnostic[]; timing: { total: number } };
 }
 
 let binding: WasmBinding | null = null;
 let initialized = false;
 let initPromise: Promise<void> | null = null;
 
-export async function initCompiler(): Promise<void> {
+/**
+ * Idempotent: the WASM module is loaded exactly once per page lifetime.
+ * Multiple callers share the in-flight Promise. Subsequent awaits resolve
+ * immediately.
+ *
+ * `Sprint 22` name. `initCompiler` kept as alias so the pre-Sprint-22
+ * call sites keep compiling.
+ */
+export async function ensureCompilerLoaded(): Promise<void> {
   if (initialized) return;
   if (initPromise) return initPromise;
 
   initPromise = (async () => {
-    if (USE_STUB_COMPILER) {
+    if (FORCE_STUB) {
+      USE_STUB_COMPILER = true;
       initialized = true;
       return;
     }
@@ -118,16 +153,16 @@ export async function initCompiler(): Promise<void> {
     try {
       // Dynamic import so the stub path doesn't bundle the real module.
       // The wasm-pack output places `covenant_wasm_bindings.js` as an ES
-      // module that accepts an optional wasm URL override.
-      //
-      // `/* @vite-ignore */` tells Rollup's static analyzer to skip this
-      // import at build time — the file only exists at runtime after
-      // `wasm-pack build` has populated public/covenant-wasm/.
+      // module whose default export is the init() function. We point it
+      // at the absolute URL of the .wasm so service-worker caching and
+      // Vercel rewrites both behave correctly.
       const modulePath = '/covenant-wasm/covenant_wasm_bindings.js';
-      const module = await import(/* @vite-ignore */ modulePath);
-      await module.default(); // default export = init()
-      binding = module as unknown as WasmBinding;
+      const wasmUrl = new URL('/covenant-wasm/covenant_wasm_bindings_bg.wasm', window.location.origin);
+      const module = (await import(/* @vite-ignore */ modulePath)) as WasmBinding;
+      await module.default(wasmUrl);
+      binding = module;
       initialized = true;
+      USE_STUB_COMPILER = false;
       // eslint-disable-next-line no-console
       console.info('[covenant] compiler initialized:', binding.version());
     } catch (err) {
@@ -136,6 +171,7 @@ export async function initCompiler(): Promise<void> {
         '[covenant] real WASM bindings unavailable, falling back to stub',
         err,
       );
+      USE_STUB_COMPILER = true;
       initialized = true; // prevent infinite retries
     }
   })();
@@ -143,9 +179,12 @@ export async function initCompiler(): Promise<void> {
   return initPromise;
 }
 
+/** Pre-Sprint-22 name kept as alias. */
+export const initCompiler = ensureCompilerLoaded;
+
 export async function compile(source: string): Promise<CompileResult> {
   const started = performance.now();
-  await initCompiler();
+  await ensureCompilerLoaded();
 
   if (binding && !USE_STUB_COMPILER) {
     return runRealCompile(source, started);
@@ -153,34 +192,114 @@ export async function compile(source: string): Promise<CompileResult> {
   return runStubCompile(source, started);
 }
 
+/**
+ * Frontend-only check. Returns just diagnostics + timing — no artifact.
+ * Cheap enough to call on every Monaco keystroke if you want; use
+ * `compile()` when you need bytecode.
+ */
+export async function checkOnly(source: string): Promise<{ diagnostics: Diagnostic[]; timing: { total: number } }> {
+  await ensureCompilerLoaded();
+  if (!binding || USE_STUB_COMPILER) {
+    return {
+      diagnostics: heuristicDiagnose(source),
+      timing: { total: 0 },
+    };
+  }
+  const r = binding.check(source);
+  return {
+    diagnostics: r.diagnostics.map((d) => adaptDiagnostic(d)),
+    timing: r.timing,
+  };
+}
+
+/**
+ * Compile up to IR construction and return the IR as printable text.
+ * Used by the Inspector's IR pane and (in Sprint 24+) the Layer
+ * Explorer's "Show IR for this layer" button.
+ */
+export async function compileToIr(source: string): Promise<{ ok: boolean; ir: string | null; diagnostics: Diagnostic[]; timing: { total: number } }> {
+  await ensureCompilerLoaded();
+  if (!binding || USE_STUB_COMPILER) {
+    const fallback = synthesizeIr(detectTopLevelKind(source), detectTopLevelName(source) ?? 'Contract', source);
+    return { ok: true, ir: fallback, diagnostics: [], timing: { total: 0 } };
+  }
+  const r = binding.compile_to_ir_text(source);
+  return {
+    ok: r.ok,
+    ir: r.ir_text,
+    diagnostics: r.diagnostics.map((d) => adaptDiagnostic(d)),
+    timing: r.timing,
+  };
+}
+
+/**
+ * Direct access to the underlying binding for the chain runtime
+ * (mockchain.ts) — avoids each module having to dynamically import
+ * the same .wasm twice. Returns `null` if init failed and we're in
+ * stub mode; callers should treat that as "chain ops unavailable".
+ */
+export async function getWasmBinding(): Promise<WasmBinding | null> {
+  await ensureCompilerLoaded();
+  return USE_STUB_COMPILER ? null : binding;
+}
+
 function runRealCompile(source: string, started: number): CompileResult {
   if (!binding) {
     throw new Error('compiler not initialized');
   }
   try {
-    const raw = binding.compile_source(source);
-    const diagnostics = raw.diagnostics.map((d) =>
-      mapDiagnostic(source, d.level, d.message, d.span_start, d.span_end, d.code),
-    );
-    let metadata: CompileMetadata | null = null;
-    if (raw.metadata) {
+    const raw = binding.compile_to_evm(source);
+    const diagnostics = raw.diagnostics.map((d) => adaptDiagnostic(d));
+
+    // ABI is shipped as a JSON-encoded string by the EVM backend.
+    // Parse it once here so consumers see a real array.
+    let abi: unknown[] | null = null;
+    if (raw.abi) {
       try {
-        metadata = JSON.parse(raw.metadata) as CompileMetadata;
+        const parsed = JSON.parse(raw.abi);
+        abi = Array.isArray(parsed) ? parsed : null;
       } catch {
-        metadata = null;
+        abi = null;
       }
     }
+
+    // Build a CompileMetadata-shaped view from the real metadata so
+    // existing UI code (Output > Metadata pane) keeps working.
+    const metadata: CompileMetadata | null = raw.metadata
+      ? {
+          module_name: detectTopLevelName(source) ?? undefined,
+          exports: raw.function_selectors.map((s) => s.name),
+          imports: undefined,
+          memory_pages: undefined,
+          compiler_version: raw.metadata.covenant_version,
+          evm_version: raw.metadata.evm_version,
+          optimizer_config: raw.metadata.optimizer_config,
+          erc_versions: raw.metadata.erc_versions,
+          precompile_abi_version: raw.metadata.precompile_abi_version,
+          function_selectors: raw.function_selectors,
+        }
+      : null;
+
+    // Convert the WASM source map (which carries pc + instr_kind) into
+    // the playground's existing `SourceMap` shape (line/col + opcode +
+    // gas/noise placeholders) by reusing `synthesizeSourceMap` for the
+    // gas/noise heuristics. The compiler doesn't yet emit those, so the
+    // synthesized values stay until they do.
+    const sourceMap = raw.ok ? synthesizeSourceMap(source) : null;
+
     return {
       ok: raw.ok,
-      wasm: raw.wasm,
+      // EVM target doesn't produce a wasm bytecode blob; the field
+      // stays null. The "Bytecode" pane reads `bytecode` (string hex)
+      // not `wasm` (Uint8Array).
+      wasm: null,
       metadata,
       diagnostics,
-      timing: { total: performance.now() - started },
-      bytecode: null,
-      abi: null,
+      timing: { total: raw.timing.total },
+      bytecode: raw.deploy_bytecode,
+      abi,
       ir: null,
-      // Until the real binding emits source maps we synthesize from source
-      sourceMap: raw.ok ? synthesizeSourceMap(source) : null,
+      sourceMap,
     };
   } catch (e) {
     return {
@@ -203,6 +322,23 @@ function runRealCompile(source: string, started: number): CompileResult {
       sourceMap: null,
     };
   }
+}
+
+/** Convert a WASM `JsDiagnostic` into the playground's `Diagnostic`. */
+function adaptDiagnostic(d: WasmDiagnostic): Diagnostic {
+  const length = Math.max(1, d.span_end - d.span_start);
+  return {
+    severity: d.level,
+    message: d.message + (d.help ? ` — ${d.help}` : ''),
+    line: d.line,
+    column: d.column,
+    endLine: d.end_line,
+    endColumn: d.end_column,
+    length,
+    code: d.code,
+    spanStart: d.span_start,
+    spanEnd: d.span_end,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -423,41 +559,11 @@ function synthesizeIr(kind: string, name: string, source: string): string {
   return lines.join('\n');
 }
 
-/**
- * Map a raw diagnostic from the WASM binding (byte-offset spans) into
- * the playground's Diagnostic shape (line/column + severity + code).
- */
-function mapDiagnostic(
-  source: string,
-  level: 'error' | 'warning' | 'note',
-  message: string,
-  spanStart: number,
-  spanEnd: number,
-  code: number,
-): Diagnostic {
-  const { line, column } = offsetToLineCol(source, spanStart);
-  const end = offsetToLineCol(source, spanEnd);
-  return {
-    severity: level === 'note' ? 'info' : level,
-    message,
-    line,
-    column,
-    endLine: end.line,
-    endColumn: end.column,
-    length: Math.max(1, spanEnd - spanStart),
-    code: formatDiagCode(level, code),
-    spanStart,
-    spanEnd,
-  };
-}
-
-function formatDiagCode(
-  level: 'error' | 'warning' | 'note',
-  code: number,
-): string {
-  const prefix = level === 'error' ? 'E' : level === 'warning' ? 'W' : 'I';
-  return `${prefix}${String(code).padStart(4, '0')}`;
-}
+// Sprint 22 deprecated `mapDiagnostic` and `formatDiagCode`: the WASM
+// bindings now ship line/column + a pre-formatted `code` string in the
+// JsDiagnostic shape. The `adaptDiagnostic` helper above does the
+// translation in one step. The byte-offset-to-line-col helper below
+// stays — `synthesizeSourceMap` and the heuristic stub still use it.
 
 /**
  * Utility: byte offset -> { line, column } (both 1-indexed).
