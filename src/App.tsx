@@ -12,6 +12,7 @@ import { OnboardingTour } from './components/Onboarding/OnboardingTour';
 import { Tour } from './components/Tour/Tour';
 import { useStore } from './lib/store';
 import { useTourStore } from './lib/tour-store';
+import { useWalletEvents } from './lib/useWalletEvents';
 import { parseShareUrl } from './lib/share';
 import { getExampleById } from './examples/registry';
 import { loadExampleSource } from './examples/loader';
@@ -238,6 +239,12 @@ function Playground() {
 // ─── Root router ──────────────────────────────────────────────────────────────
 
 export default function App() {
+  // Sprint 26 audit (KSR-CVN-PRELIM-001): subscribe to EIP-1193
+  // events so the wallet badge / mainnet refusal banner reflect
+  // reality after the user changes networks or accounts inside
+  // MetaMask without reloading the page.
+  useWalletEvents();
+
   return (
     <Routes>
       <Route path="/tour/:lessonId" element={<Tour />} />
