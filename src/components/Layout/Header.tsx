@@ -2,6 +2,7 @@ import { Layers } from 'lucide-react';
 import { useStore } from '../../lib/store';
 import { ThemeToggle } from './ThemeToggle';
 import { LayoutToggle } from './LayoutToggle';
+import { CrossTabIndicator } from './CrossTabIndicator';
 
 interface Props {
   onOpenGallery: () => void;
@@ -43,6 +44,8 @@ export function Header({ onOpenGallery, onOpenShare }: Props) {
       </a>
 
       <div className="pg-header-spacer" />
+
+      <CrossTabIndicator />
 
       <div className="pg-header-actions">
         <LayoutToggle />

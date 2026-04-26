@@ -128,6 +128,13 @@ interface State {
   refreshWallet: () => Promise<void>;
   deployToSepolia: () => Promise<void>;
 
+  // --- Cross-tab sync (V0.9 Sprint 36) ---
+  /** Number of OTHER playground tabs currently open in this browser. */
+  otherTabsCount: number;
+  /** Timestamp (Date.now()) of the last incoming cross-tab snapshot.
+   *  null when no remote sync has ever happened in this tab. */
+  lastSyncFromOtherTab: number | null;
+
   // --- Derived (computed on read) ---
   getDeployedContracts: () => DeployedContract[];
   getTxs: () => TxReceipt[];
@@ -179,6 +186,10 @@ export const useStore = create<State>((set, get) => ({
   sepoliaTxs: [],
   pendingSepoliaTx: null,
   isCallingSepolia: false,
+
+  // Sprint 36 — cross-tab sync
+  otherTabsCount: 0,
+  lastSyncFromOtherTab: null,
 
   // Inspector defaults
   layoutMode: 'simple',
@@ -673,3 +684,60 @@ export const useStore = create<State>((set, get) => ({
 // store rather than reaching into wallet.ts directly. Keeps the layering
 // honest — wallet.ts is the bottom of the stack, components stay above.
 export { etherscanTxUrl as etherscanTxUrlFor };
+
+// ─── Cross-tab sync wiring (Sprint 36) ───────────────────────────────────
+
+import { CrossTabSync, type SyncedSnapshot } from './cross-tab';
+
+/**
+ * Singleton cross-tab sync instance. Created lazily on first access so
+ * that SSR / non-browser environments (test harnesses, build-time
+ * pre-rendering) don't try to open a BroadcastChannel.
+ */
+let crossTabSync: CrossTabSync | null = null;
+
+function ensureCrossTabSync(): CrossTabSync | null {
+  if (crossTabSync !== null) return crossTabSync;
+  if (typeof window === 'undefined' || typeof BroadcastChannel === 'undefined') {
+    return null;
+  }
+  crossTabSync = new CrossTabSync({
+    onSnapshot: (snapshot) => {
+      // Apply remote snapshot. Zustand's setState merges shallow keys.
+      useStore.setState({
+        sepoliaContracts: snapshot.sepoliaContracts,
+        sepoliaTxs: snapshot.sepoliaTxs,
+        pendingSepoliaTx: snapshot.pendingSepoliaTx,
+      });
+    },
+    onOtherTabsCountChanged: (count) => {
+      useStore.setState({ otherTabsCount: count });
+    },
+    onConflict: (_fromTabId, timestamp) => {
+      useStore.setState({ lastSyncFromOtherTab: timestamp });
+    },
+  });
+  return crossTabSync;
+}
+
+// Subscribe to local store changes and broadcast the synced subset to
+// other tabs. JSON-stringify is used as a cheap deep-equal check on the
+// payload to avoid spamming the channel with redundant snapshots.
+let _lastBroadcastJson = '';
+useStore.subscribe((state) => {
+  const sync = ensureCrossTabSync();
+  if (sync === null) return;
+  const snapshot: SyncedSnapshot = {
+    sepoliaContracts: state.sepoliaContracts,
+    sepoliaTxs: state.sepoliaTxs,
+    pendingSepoliaTx: state.pendingSepoliaTx,
+  };
+  const json = JSON.stringify(snapshot);
+  if (json === _lastBroadcastJson) return;
+  _lastBroadcastJson = json;
+  sync.broadcastSnapshot(snapshot);
+});
+
+// Initialize immediately so the heartbeat starts (otherwise tabs won't
+// see each other until the first state-changing action).
+ensureCrossTabSync();
