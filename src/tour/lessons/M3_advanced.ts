@@ -97,11 +97,11 @@ record OptimizedToken {
     explanation: COMING_SOON,
     codeStarter: `-- Coming soon: upgrade patterns
 record UpgradeableVault {
-    field version: u32 = 1
+    field schema_version: amount = 1
 }
 `,
     codeSolution: `record UpgradeableVault {
-    field version: u32 = 1
+    field schema_version: amount = 1
 }
 `,
     objective: 'Coming soon.',

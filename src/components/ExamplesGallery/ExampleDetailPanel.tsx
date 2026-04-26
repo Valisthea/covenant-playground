@@ -138,6 +138,21 @@ export function ExampleDetailPanel({
           )}
         </div>
 
+        {/* ── MockChain limitation disclosure (KSR-CVN-PRELIM-005) ────── */}
+        {example.deployable && (
+          <div className="eg-detail-mockchain-note" role="note">
+            <strong>MockChain limitation</strong> — the in-tab EVM in
+            the playground supports single-contract execution + Styx
+            precompile dispatch, but it does <em>not</em> dispatch into
+            other deployed contracts via <code>CALL</code>. Examples
+            that compose multiple contracts (cross-contract calls,
+            external interactions, proxy delegation) will appear to
+            "succeed" on MockChain but the called contract's code
+            won't actually run. Deploy to <strong>Sepolia</strong> for
+            real cross-contract behaviour.
+          </div>
+        )}
+
         {/* ── Foot (CTA) ────────────────────────────────────────────────── */}
         <div className="eg-detail-foot">
           <button

@@ -361,30 +361,53 @@ export async function callOnSepolia(
  * Read-only call (`eth_call`) on Sepolia. Free, no signing, no
  * confirmation wait. Returns raw return data hex; the caller decodes
  * via the ABI.
+ *
+ * Sprint 26 audit (KSR-CVN-PRELIM-002): we deliberately do NOT call
+ * `assertSepolia` here — eth_call works against whatever network is
+ * selected and a read-only op shouldn't trigger a chain-switch popup.
+ * BUT we DO surface the actual chainId we read from in the result so
+ * the UI can warn if it doesn't match what the user thinks ("you're
+ * reading mainnet, not Sepolia").
  */
 export async function staticCallOnSepolia(
   from: string,
   to: string,
   calldata: string,
-): Promise<{ ok: boolean; returnDataHex: string; revertReason?: string }> {
+): Promise<{
+  ok: boolean;
+  returnDataHex: string;
+  revertReason?: string;
+  /** chainId the eth_call actually ran against — useful for the UI
+   *  to detect a wallet network drift mid-session. `null` if the
+   *  provider failed to report a network (rare). */
+  observedChainId: string | null;
+}> {
   if (!hasInjectedWallet()) {
     throw new WalletError('No wallet detected.', 'NO_WALLET');
   }
 
   const provider = new BrowserProvider(window.ethereum!);
-  // No assertSepolia for views — eth_call works against whatever network
-  // is selected and we don't want to nag for switches on read-only ops.
-  // Instead, surface the chain context in the result if mismatched.
+
+  // Read chain context BEFORE the call so we can annotate the result
+  // even if the call itself reverts. Cheap (no popup, single getNetwork).
+  let observedChainId: string | null = null;
+  try {
+    const net = await provider.getNetwork();
+    observedChainId = '0x' + net.chainId.toString(16).toLowerCase();
+  } catch {
+    // network read failed — best-effort, fall through with null
+  }
 
   try {
     const data = await provider.call({ from, to, data: calldata });
-    return { ok: true, returnDataHex: data };
+    return { ok: true, returnDataHex: data, observedChainId };
   } catch (e) {
     const err = e as { shortMessage?: string; message?: string };
     return {
       ok: false,
       returnDataHex: '0x',
       revertReason: err.shortMessage ?? err.message ?? 'eth_call reverted',
+      observedChainId,
     };
   }
 }

@@ -3,6 +3,7 @@ import { AccountSwitcher } from './AccountSwitcher';
 import { ContractList } from './ContractList';
 import { ChainControls } from './ChainControls';
 import { InteractionPanel } from './InteractionPanel';
+import { RecentDeployBanner } from './RecentDeployBanner';
 import { WalletPanel } from './WalletPanel';
 
 /**
@@ -108,6 +109,12 @@ export function DeployPanel() {
           </span>
         )}
       </div>
+
+      {/* Sprint 26 audit (KSR-CVN-PRELIM-008): post-deploy success
+          banner shown right under the Deploy button so a fresh
+          contract is unmissable, even after the user's eye returns
+          from the MetaMask popup. */}
+      <RecentDeployBanner />
 
       {isSepolia && (
         <>

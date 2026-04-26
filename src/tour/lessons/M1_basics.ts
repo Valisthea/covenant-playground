@@ -188,9 +188,9 @@ record Counter {
         last_updater = caller
     }
 
-    view state() returns (amount, address, amount) {
-        (count, last_updater, total_updates)
-    }
+    view get_count returns amount { count }
+    view get_last_updater returns address { last_updater }
+    view get_total_updates returns amount { total_updates }
 }
 `,
 
@@ -368,72 +368,64 @@ Notice: the last expression in a view **is** the return value — no \`return\` 
 
 Covenant's types are designed for the realities of smart contracts: big numbers, identity, time, and cryptography.
 
-## Numeric types
+## Built-in types
 
-| Type | Range | Use case |
-|---|---|---|
-| \`amount\` | 0 → 2²⁵⁶−1 | Token balances, prices |
-| \`u256\` / \`u128\` / \`u64\` / \`u32\` / \`u8\` | Fixed bit-width | Fees, counters, flags |
-| \`i256\` / \`i128\` | Signed | Deltas, signed math |
+| Type | Use case |
+|---|---|
+| \`amount\` | uint256 — token balances, prices, counters |
+| \`address\` | 20-byte Ethereum address |
+| \`text\` | UTF-8 string (like Solidity \`string\`) |
+| \`hash\` | bytes32 — Keccak-256 digests |
+| \`bytes\` | Variable-length binary |
+| \`time\` | Unix timestamp (seconds) |
+| \`duration\` | Time delta (\`7 days\`, \`1 hour\`, etc.) |
+| \`pq_key\` | Post-quantum (Dilithium-5) public key |
 
-## Identity types
+## A note on numeric types
 
-| Type | Size | Use case |
-|---|---|---|
-| \`address\` | 20 bytes | Wallet / contract address |
-| \`hash\` | 32 bytes | Keccak-256 digest |
-| \`bytes\` | Variable | Arbitrary binary |
+Covenant's V0.8 numeric type is \`amount\` (semantically a uint256). Solidity-style fixed bit-widths like \`uint8\` / \`uint64\` are not part of the language today. If you need to enforce a smaller range, use \`amount\` and add a \`when value <= 255\` guard.
 
-## Other primitives
+## One return value per view
 
-- \`bool\` — true or false
-- \`text\` — UTF-8 string
-- \`time\` — Unix timestamp (seconds)
-- \`duration\` — time delta in seconds
-
-## Why \`u8\` for decimals?
-
-ERC-20 tokens always have a \`decimals\` field between 0 and 255. \`u8\` (8-bit unsigned) captures that exactly and signals intent to readers. Using \`amount\` would waste space and hide meaning.
-
-Covenant's type system encodes semantics, not just storage size.
+Each \`view\` returns a single typed value. To expose multiple fields, declare multiple views (one per field). This keeps the ABI flat and matches how every block explorer renders contract state.
 `,
 
     codeStarter: `-- Token metadata contract
--- 🎯 Goal: add 5 fields with correct types
+-- 🎯 Goal: add 4 fields with correct types
 
 record TokenInfo {
     -- TODO 1: \`name\`           — a string like "My Token"
     -- TODO 2: \`symbol\`         — a short string like "MTK"
-    -- TODO 3: \`decimals\`       — a number 0-255 (use the smallest fitting type)
+    -- TODO 3: \`decimals\`       — a non-negative integer like 18
     -- TODO 4: \`total_supply\`   — a very large non-negative integer
-    -- TODO 5: \`creator\`        — the contract deployer's address
 
-    view metadata() returns (text, text, u8, amount, address) {
-        (name, symbol, decimals, total_supply, creator)
-    }
+    view get_name returns text { name }
+    view get_symbol returns text { symbol }
+    view get_decimals returns amount { decimals }
+    view get_total_supply returns amount { total_supply }
 }
 `,
 
     codeSolution: `record TokenInfo {
     field name: text = "My Token"
     field symbol: text = "MTK"
-    field decimals: u8 = 18
+    field decimals: amount = 18
     field total_supply: amount = 1_000_000
-    field creator: address = deployer
 
-    view metadata() returns (text, text, u8, amount, address) {
-        (name, symbol, decimals, total_supply, creator)
-    }
+    view get_name returns text { name }
+    view get_symbol returns text { symbol }
+    view get_decimals returns amount { decimals }
+    view get_total_supply returns amount { total_supply }
 }
 `,
 
-    objective: 'Declare 5 fields with precisely correct types: `text`, `text`, `u8`, `amount`, `address`.',
+    objective: 'Declare 4 fields with correct types: `text`, `text`, `amount`, `amount`.',
 
     hints: [
       '`name` and `symbol` are strings → `text`',
-      '`decimals` fits in 0-255 → `u8` (not `amount`)',
+      '`decimals` is a small non-negative number → `amount` (V0.8 has no fixed bit-widths)',
       '`total_supply` is a huge number → `amount`',
-      '`creator` is a wallet address → `address`; initialize with `deployer`',
+      'Initialize each with `= default_value` after the type',
     ],
 
     validator: {
@@ -442,17 +434,16 @@ record TokenInfo {
         const checks = [
           { label: 'name: text', ok: /field\s+name\s*:\s*text/i.test(source) },
           { label: 'symbol: text', ok: /field\s+symbol\s*:\s*text/i.test(source) },
-          { label: 'decimals: u8', ok: /field\s+decimals\s*:\s*u8/i.test(source) },
+          { label: 'decimals: amount', ok: /field\s+decimals\s*:\s*amount/i.test(source) },
           { label: 'total_supply: amount', ok: /field\s+total_supply\s*:\s*amount/i.test(source) },
-          { label: 'creator: address', ok: /field\s+creator\s*:\s*address/i.test(source) },
         ];
         const passing = checks.filter((c) => c.ok);
-        if (passing.length === 5) {
-          return { passed: true, message: '✓ All 5 fields with correct types!' };
+        if (passing.length === 4) {
+          return { passed: true, message: '✓ All 4 fields with correct types!' };
         }
         return {
           passed: false,
-          message: `${passing.length}/5 fields correctly typed`,
+          message: `${passing.length}/4 fields correctly typed`,
           details: 'Incorrect: ' + checks.filter((c) => !c.ok).map((c) => c.label).join(', '),
         };
       },
@@ -478,115 +469,116 @@ Guards are **pre-conditions checked before an action runs**. If any guard fails,
 
 ## Three guard types
 
-### \`only\` — identity
-Who is allowed to call this?
+### \`when\` — boolean condition
+Most flexible: any boolean expression on contract state, args, or built-in symbols.
 
 \`\`\`covenant
-action pause() only deployer { ... }
-action claim() only members  { ... }   -- members = a map<address, bool>
+action withdraw() when now >= unlock_time { ... }
+action transfer(to: address) when caller == owner { ... }
 \`\`\`
 
-### \`when\` — state / time condition
-What must be true about the contract state?
+### \`only\` — predefined role
+Two predefined role qualifiers verified in V0.8 fixtures:
+- \`only first_time_caller\` — caller hasn't called this action before
+- \`only registered_key\` — caller has a registered \`pq_key\` (board pattern)
+
+For custom identity checks (e.g., owner), use \`when caller == owner_field\` instead.
+
+### \`given\` — value-in-set
+Validates an argument belongs to a declared collection.
 
 \`\`\`covenant
-action withdraw() when now >= unlock_time    { ... }
-action finalize() when phase == closed       { ... }
+action cast(pick: choice) given pick in options { ... }
 \`\`\`
 
-### \`given\` — input validation
-What must be true about the arguments?
+## Stacking guards — comma-separated
+
+**Important**: multiple guards are separated by **commas**, NOT \`&&\`. All must pass.
 
 \`\`\`covenant
-action transfer(to: address, value: amount)
-        given balance >= value
-        given to != caller { ... }
-\`\`\`
-
-## Stacking guards
-
-Multiple guards can chain — all must pass:
-
-\`\`\`covenant
-action sensitive()
-        only admin
-        when phase == ready
-        given amount > 0 {
+action cast(pick: choice)
+        when now < opened_at + duration,
+        only first_time_caller,
+        given pick in options {
     -- runs only when all 3 conditions hold
 }
 \`\`\`
 
-Guards make intent explicit. A reader can see the pre-conditions at a glance, without parsing the body.
+Guards make intent explicit. A reader sees the pre-conditions at a glance, without parsing the body.
 `,
 
     codeStarter: `record TimeLockVault {
     field balance: amount = 0
     field unlock_time: time
-    field owner: address = deployer
+    field owner: address
+
+    action set_owner(who: address) {
+        owner = who
+    }
 
     action deposit(value: amount) {
         balance = balance + value
     }
 
-    -- TODO: add action \`withdraw(value: amount)\` with 3 guards:
-    --   1. only the owner can call
-    --   2. only after unlock_time has passed  (now >= unlock_time)
-    --   3. requested value must not exceed balance  (balance >= value)
+    -- TODO: add action \`withdraw(value: amount)\` with 2 guards (comma-separated):
+    --   1. only after unlock_time has passed   (when now >= unlock_time)
+    --   2. requested value must not exceed balance  (when balance >= value)
     --   Body: balance = balance - value
 
-    view get_balance() returns amount { balance }
-    view get_unlock()  returns time   { unlock_time }
+    view get_balance returns amount { balance }
+    view get_unlock returns time { unlock_time }
 }
 `,
 
     codeSolution: `record TimeLockVault {
     field balance: amount = 0
     field unlock_time: time
-    field owner: address = deployer
+    field owner: address
+
+    action set_owner(who: address) {
+        owner = who
+    }
 
     action deposit(value: amount) {
         balance = balance + value
     }
 
     action withdraw(value: amount)
-            only owner
-            when now >= unlock_time
-            given balance >= value {
+            when now >= unlock_time,
+            when balance >= value {
         balance = balance - value
     }
 
-    view get_balance() returns amount { balance }
-    view get_unlock()  returns time   { unlock_time }
+    view get_balance returns amount { balance }
+    view get_unlock returns time { unlock_time }
 }
 `,
 
-    objective: 'Add `action withdraw(value: amount)` with guards: `only owner`, `when now >= unlock_time`, and `given balance >= value`.',
+    objective: 'Add `action withdraw(value: amount)` with two `when` guards (comma-separated): `when now >= unlock_time` and `when balance >= value`.',
 
     hints: [
-      'Guards go between the parameter list and the opening `{`',
-      '`only owner` checks identity',
-      '`when now >= unlock_time` checks timing — `now` is the block timestamp',
-      '`given balance >= value` checks the input against stored state',
+      'Guards go between the parameter list `(value: amount)` and the opening `{`',
+      'Multiple guards must be separated by commas',
+      '`now` is the built-in current block timestamp',
+      'Body: just `balance = balance - value`',
     ],
 
     validator: {
       type: 'custom',
       fn: (source) => {
         const hasWithdraw = /action\s+withdraw\s*\(\s*value\s*:\s*amount\s*\)/i.test(source);
-        const hasOnlyOwner = /only\s+owner/i.test(source);
         const hasWhenUnlock = /when\s+now\s*>=\s*unlock_time/i.test(source);
-        const hasGivenBalance = /given\s+balance\s*>=\s*value/i.test(source);
+        const hasWhenBalance = /when\s+balance\s*>=\s*value/i.test(source);
         const hasBody = /balance\s*=\s*balance\s*-\s*value/i.test(source);
 
-        if (hasWithdraw && hasOnlyOwner && hasWhenUnlock && hasGivenBalance && hasBody) {
-          return { passed: true, message: '✓ All 3 guards applied — Module 1 complete! 🎉' };
+        if (hasWithdraw && hasWhenUnlock && hasWhenBalance && hasBody) {
+          return { passed: true, message: '✓ Both guards applied — Module 1 complete! 🎉' };
         }
 
         const missing: string[] = [];
         if (!hasWithdraw) missing.push('`action withdraw(value: amount)`');
-        if (!hasOnlyOwner) missing.push('`only owner`');
         if (!hasWhenUnlock) missing.push('`when now >= unlock_time`');
-        if (!hasGivenBalance) missing.push('`given balance >= value`');
+        if (!hasWhenBalance) missing.push('`when balance >= value`');
         if (!hasBody) missing.push('`balance = balance - value` in body');
 
         return {
