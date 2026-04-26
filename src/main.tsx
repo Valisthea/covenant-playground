@@ -13,6 +13,7 @@ import './lib/theme';
 import './lib/register-sw';
 import App from './App';
 import './styles/globals.css';
+import './styles/showcases.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
