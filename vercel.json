@@ -9,7 +9,9 @@
     { "source": "/examples", "destination": "/index.html" },
     { "source": "/examples/:id", "destination": "/index.html" },
     { "source": "/tour", "destination": "/index.html" },
-    { "source": "/tour/:lessonId", "destination": "/index.html" }
+    { "source": "/tour/:lessonId", "destination": "/index.html" },
+    { "source": "/showcases", "destination": "/index.html" },
+    { "source": "/showcases/:id", "destination": "/index.html" }
   ],
   "headers": [
     {

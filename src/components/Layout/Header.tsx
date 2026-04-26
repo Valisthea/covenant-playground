@@ -1,4 +1,5 @@
 import { Layers } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useStore } from '../../lib/store';
 import { ThemeToggle } from './ThemeToggle';
 import { LayoutToggle } from './LayoutToggle';
@@ -62,6 +63,9 @@ export function Header({ onOpenGallery, onOpenShare }: Props) {
         <button className="pg-btn" onClick={onOpenGallery} type="button">
           Examples (25)
         </button>
+        <Link className="pg-btn" to="/showcases">
+          Showcases
+        </Link>
         <button className="pg-btn" onClick={onOpenShare} type="button">
           Share
         </button>
