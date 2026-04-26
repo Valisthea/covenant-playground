@@ -12,6 +12,7 @@ import {
   type DeployedContract,
 } from './mockchain';
 import { Interface } from 'ethers';
+import { decodeLogs } from './event-decoder';
 import {
   callOnSepolia,
   connectWallet,
@@ -514,6 +515,11 @@ export const useStore = create<State>((set, get) => ({
     // State-mutating call — MetaMask popup, 12-30s wait.
     try {
       const r = await callOnSepolia(activeContract, calldata, 0n);
+      // Sprint 37 Phase 37.3 — decode raw logs into named events via the
+      // contract ABI so TxHistoryPane renders Transfer(from, to, value)
+      // instead of raw topics + hex data. Logs from contracts NOT in our
+      // ABI fall back to a `<unknown>` stub.
+      const decodedEvents = decodeLogs(iface, r.logs);
       const receipt: TxReceipt = {
         hash: r.txHash,
         blockNumber: r.blockNumber,
@@ -525,7 +531,7 @@ export const useStore = create<State>((set, get) => ({
         args,
         gasUsed: r.gasUsed,
         status: r.status,
-        events: [],
+        events: decodedEvents,
       };
       set((s) => ({
         isCallingSepolia: false,
@@ -685,9 +691,14 @@ export const useStore = create<State>((set, get) => ({
 // honest — wallet.ts is the bottom of the stack, components stay above.
 export { etherscanTxUrl as etherscanTxUrlFor };
 
-// ─── Cross-tab sync wiring (Sprint 36) ───────────────────────────────────
+// ─── Persistence + Cross-tab sync wiring (Sprint 36 + 37) ───────────────
 
 import { CrossTabSync, type SyncedSnapshot } from './cross-tab';
+import {
+  debounced,
+  loadSnapshot,
+  persistSnapshot,
+} from './persistence';
 
 /**
  * Singleton cross-tab sync instance. Created lazily on first access so
@@ -741,3 +752,61 @@ useStore.subscribe((state) => {
 // Initialize immediately so the heartbeat starts (otherwise tabs won't
 // see each other until the first state-changing action).
 ensureCrossTabSync();
+
+// ─── Persistence (Sprint 37) ─────────────────────────────────────────────
+//
+// On module load, hydrate state from IndexedDB for the active target.
+// On state changes, debounce-save to IndexedDB. Each target ('mockchain',
+// 'sepolia') has its own persisted slot — switching targets does not
+// cross-contaminate.
+
+if (typeof window !== 'undefined') {
+  // Async hydrate on load. We don't block module init; once the snapshot
+  // arrives we apply it via setState. Users who refresh the page see
+  // their contracts + tx history reappear within ~50ms.
+  void (async () => {
+    try {
+      // Hydrate the CURRENT target only. Switching targets later
+      // re-hydrates lazily via the target-change listener below.
+      const target = useStore.getState().target;
+      if (target !== 'sepolia') return; // MockChain state lives in WASM, not IDB
+      const snap = await loadSnapshot('sepolia');
+      if (snap === null) return;
+      // Don't clobber state that's already been set (e.g. user typed
+      // immediately after page load and triggered something).
+      const cur = useStore.getState();
+      if (cur.sepoliaContracts.length === 0 && cur.sepoliaTxs.length === 0) {
+        useStore.setState({
+          sepoliaContracts: snap.contracts,
+          sepoliaTxs: snap.transactions,
+        });
+      }
+    } catch {
+      // IDB unavailable (private browsing, etc.) — silent fail, in-memory
+      // session continues normally.
+    }
+  })();
+
+  // Subscribe to relevant slices and debounce-save (300ms).
+  const debouncedSave = debounced(
+    (target: DeployTarget, contracts: DeployedContract[], transactions: TxReceipt[]) => {
+      void persistSnapshot(target, { contracts, transactions });
+    },
+    300,
+  );
+
+  let _lastPersistedJson = '';
+  useStore.subscribe((state) => {
+    if (state.target !== 'sepolia') return; // only Sepolia is persisted
+    const payload = {
+      contracts: state.sepoliaContracts,
+      transactions: state.sepoliaTxs,
+    };
+    const json = JSON.stringify(payload, (_k, v) =>
+      typeof v === 'bigint' ? v.toString() : v,
+    );
+    if (json === _lastPersistedJson) return;
+    _lastPersistedJson = json;
+    debouncedSave(state.target, payload.contracts, payload.transactions);
+  });
+}
