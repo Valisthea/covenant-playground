@@ -1,6 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { CheckCircle, Lock, Circle, ChevronRight } from 'lucide-react';
-import { CURRICULUM } from '../../tour/curriculum';
+import { CURRICULUM, TOTAL_LESSONS } from '../../tour/curriculum';
 import { useTourStore } from '../../lib/tour-store';
 
 interface TourSidebarProps {
@@ -25,7 +25,7 @@ export function TourSidebar({ currentLessonId }: TourSidebarProps) {
             <div className="tour-progress-fill" style={{ width: `${pct}%` }} />
           </div>
           <span className="tour-progress-text">
-            {done} / 15 lessons
+            {done} / {TOTAL_LESSONS} lessons
           </span>
         </div>
       </div>

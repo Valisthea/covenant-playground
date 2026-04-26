@@ -16,6 +16,7 @@ import { useWalletEvents } from './lib/useWalletEvents';
 import { parseShareUrl } from './lib/share';
 import { getExampleById } from './examples/registry';
 import { loadExampleSource } from './examples/loader';
+import { TOTAL_LESSONS } from './tour/curriculum';
 import { BookOpen, X } from 'lucide-react';
 
 // ─── Tour banner shown on the playground ──────────────────────────────────────
@@ -36,7 +37,7 @@ function TourBanner() {
         <>
           <span>
             Resume Tour of Covenant —{' '}
-            <strong>{completedLessonIds.length}/15 lessons</strong> completed
+            <strong>{completedLessonIds.length}/{TOTAL_LESSONS} lessons</strong> completed
           </span>
           <Link to="/tour" className="tour-banner-cta">
             Continue →
