@@ -56,6 +56,7 @@ export function ExamplesGallery() {
       privacy: 2,
       governance: 3,
       advanced: 4,
+      'v09-new': 5,
     };
     return [...list].sort((a, b) => {
       const c = catOrder[a.category] - catOrder[b.category];
@@ -74,6 +75,7 @@ export function ExamplesGallery() {
       privacy: 0,
       governance: 0,
       advanced: 0,
+      'v09-new': 0,
     };
     for (const e of searched) {
       base[e.category]++;

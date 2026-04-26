@@ -3,7 +3,7 @@ import { categoryLabel } from '../../examples/types';
 
 type TabKey = 'all' | ExampleCategory;
 
-const CATEGORIES: TabKey[] = ['all', 'basics', 'defi', 'privacy', 'governance', 'advanced'];
+const CATEGORIES: TabKey[] = ['all', 'basics', 'defi', 'privacy', 'governance', 'advanced', 'v09-new'];
 
 interface Props {
   active: TabKey;

@@ -90,6 +90,7 @@ export function getGalleryStats(): GalleryStats {
     privacy: 0,
     governance: 0,
     advanced: 0,
+    'v09-new': 0,
   };
   const byDifficulty: Record<DifficultyLevel, number> = {
     beginner: 0,
