@@ -1,4 +1,11 @@
-// Examples Gallery — aggregator + lookup helpers (Sprint 19)
+// Examples Gallery — aggregator + lookup helpers
+//
+// Sprint 49 rewrite: replaced the 25-entry mix of working/broken examples
+// across 5 category files (basics/defi/privacy/governance/advanced/v09-new)
+// with a single 16-entry `e-series.ts` of verified contracts.
+//
+// All entries are tagged `compileStatus: 'verified'` and the inventory CI
+// gate (`scripts/inventory-content.mjs --strict`) ensures every entry compiles.
 
 import type {
   Example,
@@ -8,28 +15,22 @@ import type {
   DifficultyLevel,
 } from './types';
 
-import { basicsExamples } from './basics';
-import { defiExamples } from './defi';
-import { privacyExamples } from './privacy';
-import { governanceExamples } from './governance';
-import { advancedExamples } from './advanced';
-import { v09NewExamples } from './v09-new';
+import { eSeriesExamples } from './e-series';
 
 // ─── Master registry ────────────────────────────────────────────────────────
 
-export const ALL_EXAMPLES: Example[] = [
-  ...basicsExamples,
-  ...defiExamples,
-  ...privacyExamples,
-  ...governanceExamples,
-  ...advancedExamples,
-  ...v09NewExamples,
-];
+export const ALL_EXAMPLES: Example[] = [...eSeriesExamples];
+
+/** Verified-only subset (entries the inventory CI gate has confirmed compile). */
+export const VERIFIED_EXAMPLES = ALL_EXAMPLES.filter(
+  (e) => e.compileStatus === 'verified',
+);
+
+/** Number of verified examples — what the gallery header reports. */
+export const GALLERY_SIZE = VERIFIED_EXAMPLES.length;
 
 // Pre-indexed map for O(1) ID lookup.
-const BY_ID: Map<ExampleId, Example> = new Map(
-  ALL_EXAMPLES.map((e) => [e.id, e]),
-);
+const BY_ID: Map<ExampleId, Example> = new Map(ALL_EXAMPLES.map((e) => [e.id, e]));
 
 // ─── Lookup helpers ─────────────────────────────────────────────────────────
 
@@ -38,9 +39,7 @@ export function getExampleById(id: ExampleId): Example | null {
 }
 
 export function getExamplesByCategory(category: ExampleCategory): Example[] {
-  return ALL_EXAMPLES
-    .filter((e) => e.category === category)
-    .sort((a, b) => a.order - b.order);
+  return ALL_EXAMPLES.filter((e) => e.category === category).sort((a, b) => a.order - b.order);
 }
 
 export function getExamplesByTag(tag: ExampleTag): Example[] {
@@ -86,10 +85,13 @@ export interface GalleryStats {
 export function getGalleryStats(): GalleryStats {
   const byCategory: Record<ExampleCategory, number> = {
     basics: 0,
-    defi: 0,
     privacy: 0,
-    governance: 0,
     advanced: 0,
+    v09: 0,
+    showcase: 0,
+    // Legacy categories — kept in the record for type completeness.
+    defi: 0,
+    governance: 0,
     'v09-new': 0,
   };
   const byDifficulty: Record<DifficultyLevel, number> = {

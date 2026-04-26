@@ -52,11 +52,14 @@ export function ExamplesGallery() {
     // Stable sort: category order, then slot order
     const catOrder: Record<ExampleCategory, number> = {
       basics: 0,
-      defi: 1,
-      privacy: 2,
-      governance: 3,
-      advanced: 4,
-      'v09-new': 5,
+      privacy: 1,
+      advanced: 2,
+      v09: 3,
+      showcase: 4,
+      // Legacy categories — drained but typed for completeness.
+      defi: 5,
+      governance: 6,
+      'v09-new': 7,
     };
     return [...list].sort((a, b) => {
       const c = catOrder[a.category] - catOrder[b.category];
@@ -71,10 +74,13 @@ export function ExamplesGallery() {
     const base: Record<TabKey, number> = {
       all: searched.length,
       basics: 0,
-      defi: 0,
       privacy: 0,
-      governance: 0,
       advanced: 0,
+      v09: 0,
+      showcase: 0,
+      // Legacy categories — drained but typed for completeness.
+      defi: 0,
+      governance: 0,
       'v09-new': 0,
     };
     for (const e of searched) {
@@ -143,29 +149,29 @@ export function ExamplesGallery() {
           Examples Gallery
         </h1>
         <p className="eg-hero-subtitle">
-          {stats.total} annotated contracts across 5 categories — from the minimal
+          {stats.total} verified contracts across 5 categories — from the minimal
           Hello Covenant to cross-chain shielded bridges. Each example
           ships with background, modifications to try, and a direct launch
-          into the playground.
+          into the playground. All entries gated by the inventory CI test.
         </p>
         <div className="eg-hero-stats">
           <span className="eg-hero-stat">
-            <strong>{stats.total}</strong> examples
+            <strong>{stats.total}</strong> verified
           </span>
           <span className="eg-hero-stat">
             <strong>{stats.byCategory.basics}</strong> basics
           </span>
           <span className="eg-hero-stat">
-            <strong>{stats.byCategory.defi}</strong> defi
-          </span>
-          <span className="eg-hero-stat">
             <strong>{stats.byCategory.privacy}</strong> privacy
           </span>
           <span className="eg-hero-stat">
-            <strong>{stats.byCategory.governance}</strong> governance
+            <strong>{stats.byCategory.advanced}</strong> advanced
           </span>
           <span className="eg-hero-stat">
-            <strong>{stats.byCategory.advanced}</strong> advanced
+            <strong>{stats.byCategory.v09}</strong> V0.9 new
+          </span>
+          <span className="eg-hero-stat">
+            <strong>{stats.byCategory.showcase}</strong> showcase
           </span>
         </div>
       </section>

@@ -1,4 +1,4 @@
--- D3 — Cross-Contract Calls (V0.9)
+-- E13 — Cross-Contract Calls (V0.9)
 --
 -- The `interface` keyword declares the surface of an external contract
 -- for typed cross-contract calls. The compiler checks call-site signatures
@@ -12,13 +12,15 @@ interface IERC20 {
 
 module Withdrawer {
     field token: address
+    field admin: address
 
-    action initialize(t: address) {
+    action initialize(t: address, who: address) {
         only deployer
         token = t
+        admin = who
     }
 
-    action withdraw(value: amount) {
+    action withdraw(value: amount) only admin {
         let iface = call_interface(token, IERC20)
         iface.transfer(caller, value)
     }

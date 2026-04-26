@@ -1,0 +1,30 @@
+-- E16 — Full Ceremony Lifecycle (V0.9 Sepolia-ready)
+--
+-- A complete amnesia ceremony, ready to deploy on Sepolia via the
+-- helper-contract bridge. The ceremony lifecycle:
+--   1. setup()         — initialize ceremony, generate session
+--   2. submit_share()  — guardians submit Shamir shares
+--   3. finalize()      — close share collection (threshold met)
+--   4. destroy()       — emit irrevocable destruction proof (Wesolowski VDF)
+--
+-- V0.9 milestone: this lifecycle executes on real Sepolia. The M1 milestone
+-- on Etherscan (0x2FB87d54...) is the first ceremony destruction ever
+-- verified on a live network.
+--
+-- Auto-synthesized:
+--   Actions: setup(), submit_share(bytes32), finalize(), destroy()
+--   Views:   phase(), session_id(), is_destroyed(), owner()
+--   Events:  CeremonyStarted, ShareSubmitted, CeremonyFinalized, CeremonyDestroyed
+--
+-- Deploy on Sepolia:
+--   covenant build --target-chain sepolia ceremony.cov
+--   forge create ... or use the playground "Deploy" button
+
+ceremony FullCeremony {
+    guardians: 5
+    threshold: 3
+
+    on_destroy {
+        destroy(0)
+    }
+}

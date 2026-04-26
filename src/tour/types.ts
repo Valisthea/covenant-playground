@@ -1,7 +1,7 @@
 // Tour of Covenant — data model
 
-export type ModuleId = 'M1' | 'M2' | 'M3';
-export type LessonId = string; // "M1L1", "M1L2", ..., "M3L5"
+export type ModuleId = 'M1' | 'M2' | 'M3' | 'M4';
+export type LessonId = string; // "M1L1", "M1L2", ..., "M4L5"
 
 export interface Module {
   id: ModuleId;

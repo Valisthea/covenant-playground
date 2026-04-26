@@ -1,0 +1,38 @@
+-- E15 — Token + Withdrawer (V0.9 composition pattern)
+--
+-- Two contracts in one file demonstrating the canonical composition:
+-- a `token` (ERC-20 auto-synthesis) + a `module` that calls into it via
+-- a typed `interface` declaration. This is the V0.9 way to wire DeFi
+-- protocols, treasury contracts, and any module that needs to move tokens.
+
+token GameToken {
+    symbol: "GAME"
+    name: "Game Token"
+    decimals: 18
+    supply: 1_000_000 to deployer
+}
+
+interface IGameToken {
+    action transfer(to: address, value: amount) returns bool
+    view balance_of(who: address) returns amount
+}
+
+module Treasury {
+    field token_addr: address
+    field admin: address
+
+    action initialize(token: address, who: address) {
+        token_addr = token
+        admin = who
+    }
+
+    action distribute(to: address, value: amount) only admin {
+        let iface = call_interface(token_addr, IGameToken)
+        iface.transfer(to, value)
+    }
+
+    view treasury_balance returns amount {
+        let iface = call_interface(token_addr, IGameToken)
+        iface.balance_of(self)
+    }
+}

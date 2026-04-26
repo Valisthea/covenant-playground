@@ -1,6 +1,6 @@
 // Examples Gallery — data model (Sprint 19)
 
-export type ExampleId = string; // "B1", "D1", "P1", "G1", "A1" …
+export type ExampleId = string; // E01-E16 (Sprint 49 e-series; replaces legacy A/B/C/D scheme)
 
 export type DifficultyLevel = 'beginner' | 'intermediate' | 'advanced' | 'expert';
 
@@ -13,7 +13,17 @@ export type ExampleTag =
   | 'types' | 'reference' | 'no-privacy' | 'advanced-patterns'
   | 'erc721' | 'erc8231' | 'interface' | 'v09'; // V0.9 additions
 
-export type ExampleCategory = 'basics' | 'defi' | 'privacy' | 'governance' | 'advanced' | 'v09-new';
+export type ExampleCategory =
+  | 'basics'
+  | 'privacy'
+  | 'advanced'
+  | 'v09'
+  | 'showcase'
+  // Legacy categories retained for backward compatibility during migration.
+  // New entries should not use these — Sprint 49 consolidated to the 5 above.
+  | 'defi'
+  | 'governance'
+  | 'v09-new';
 
 /**
  * A curated example. Source code is fetched lazily from
@@ -52,6 +62,9 @@ export interface Example {
   deployable: boolean;
   gasEstimate?: string;
   usedInProduction: boolean;
+
+  // Sprint 49: empirical verification status — set by inventory CI gate
+  compileStatus?: 'verified' | 'failing' | 'untested';
 }
 
 export interface DocLink {
@@ -78,10 +91,13 @@ export function difficultyLabel(level: DifficultyLevel): string {
 export function categoryLabel(cat: ExampleCategory): string {
   const labels: Record<ExampleCategory, string> = {
     basics: 'Basics',
-    defi: 'DeFi',
     privacy: 'Privacy',
-    governance: 'Governance',
     advanced: 'Advanced',
+    v09: 'V0.9 New',
+    showcase: 'Showcase',
+    // Legacy
+    defi: 'DeFi',
+    governance: 'Governance',
     'v09-new': 'V0.9 New',
   };
   return labels[cat];

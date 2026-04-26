@@ -2,6 +2,7 @@ import type { Module, Lesson } from './types';
 import { M1_basics } from './lessons/M1_basics';
 import { M2_privacy } from './lessons/M2_privacy';
 import { M3_advanced } from './lessons/M3_advanced';
+import { M4_v09 } from './lessons/M4_v09';
 
 export const CURRICULUM: Module[] = [
   {
@@ -14,16 +15,23 @@ export const CURRICULUM: Module[] = [
   {
     id: 'M2',
     title: 'Privacy',
-    description: 'FHE · ZK proofs · Post-quantum · Amnesia',
+    description: 'Encrypted state · PQ signatures · Amnesia · Private voting',
     color: '#A78BFA',
     lessons: M2_privacy,
   },
   {
     id: 'M3',
     title: 'Advanced',
-    description: 'Bridges · Aggregates · Optimizations · Deploy',
+    description: 'Time guards · Custom errors · Escrow · Auto-synthesis · Hybrid privacy',
     color: '#4C1D95',
     lessons: M3_advanced,
+  },
+  {
+    id: 'M4',
+    title: 'V0.9 Features',
+    description: 'NFT · PQ Registry · Interface · Testing · Sepolia deploy',
+    color: '#22C55E',
+    lessons: M4_v09,
   },
 ];
 
