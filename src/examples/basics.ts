@@ -1,148 +1,88 @@
+// Basics — Sprint 27 rewrite (Phase 27.2)
+//
+// Two examples derived from verified compiler fixtures:
+//   A1 — example_01_hello.cov  (record + view + action minimal)
+//   A2 — example_02_coin.cov   (token construct, ERC-20 auto-synthesis)
+
 import type { Example } from './types';
 
 export const basicsExamples: Example[] = [
   {
-    id: 'B1',
+    id: 'A1',
     category: 'basics',
     order: 1,
-    title: 'Hello Covenant',
-    shortDescription: 'The minimal Covenant file — a record with one field and one action.',
-    longDescription:
-      `The simplest possible Covenant contract. Demonstrates the fundamentals: how to declare a record, store state in a field, and expose read/write capabilities through actions and views.\n\nIf you're new to Covenant, this is the right starting point. The syntax is declarative — no function keyword, no external/public modifiers, no need to think about visibility. The language infers what it needs.\n\nThis same skeleton forms ~70% of real-world contracts.`,
+    title: 'Hello',
+    shortDescription:
+      'The minimal viable Covenant file: a record with one field, a setter action, and a getter view.',
+    longDescription: `The simplest possible Covenant contract. Demonstrates the three building blocks every contract uses: a \`record\` type, a \`field\`, and an \`action\` paired with a \`view\`.
+
+Notice the syntax compared to Solidity:
+
+- Comments start with \`--\` (Haskell-style), not \`//\`.
+- The top-level keyword is \`record\` — Covenant's minimal kv-store. Other top-level keywords (\`token\`, \`ballot\`, \`encrypted counter\`, \`ceremony\`...) trigger different stdlib auto-synthesis.
+- Field declarations inside \`record\` don't need the \`field\` keyword (it's implicit).
+- Views with zero arguments don't take parentheses: \`view read returns text\` (not \`view read() returns text\`).
+
+This is the right starting point for any Covenant developer. Read the source, then click "Open in Playground" and try modifying it.`,
     difficulty: 'beginner',
     tags: ['basic', 'no-privacy', 'reference'],
     estimatedReadMinutes: 3,
     prerequisites: [],
     tourLessons: ['M1L1'],
-    sourcePath: '01-hello.cov',
+    sourcePath: 'A1-hello.cov',
     whatToModify: [
-      'Add a counter that tracks how many times the greeting was updated',
-      'Restrict update to a whitelist (map<address, bool>)',
-      'Add a timestamp showing when the greeting last changed',
-      'Emit an event each time the greeting changes',
+      'Add a `field updates: amount = 0` and increment it inside `update`.',
+      'Add a `view last_updater returns address` that returns who last called update (you\'ll need a `field last_updater: address`).',
+      'Restrict `update` to the deployer with `when caller == deployer`.',
+      'Emit an event each time the greeting changes (`event GreetingChanged(who: address, old: text, new: text)` then `emit ...`).',
     ],
-    relatedExamples: ['B2', 'B3'],
+    relatedExamples: ['A2', 'A3'],
     docsLinks: [
-      { title: 'First Contract Tutorial', url: 'https://docs.covenant-lang.org/getting-started/first-contract/' },
-      { title: 'Actions and Views Reference', url: 'https://docs.covenant-lang.org/reference/language/actions-views/' },
+      { title: 'Real Covenant Syntax (V0.8)', url: 'https://github.com/Valisthea/covenant-playground/blob/main/docs/REAL_COVENANT_SYNTAX.md' },
+      { title: 'docs.covenant-lang.org', url: 'https://docs.covenant-lang.org' },
     ],
     deployable: true,
-    gasEstimate: '~90k gas (deploy)',
+    gasEstimate: '~80k gas (deploy)',
     usedInProduction: false,
   },
   {
-    id: 'B2',
+    id: 'A2',
     category: 'basics',
     order: 2,
-    title: 'Simple Counter',
-    shortDescription: 'A number with increment/decrement, events, and a non-negative guard.',
-    longDescription:
-      `A step up from Hello Covenant. This contract tracks a number and allows anyone to increment or decrement it. Introduces mutable state, events, and the \`require\` guard that prevents the count from going negative.\n\nNote how actions are non-payable by default. If you want to accept Ether, you declare it explicitly — this makes security properties clearer than in Solidity, where \`payable\` is opt-out.`,
+    title: 'Coin (ERC-20)',
+    shortDescription:
+      'A standard ERC-20 token. The `token` keyword auto-synthesizes the entire ERC-20 surface from just metadata.',
+    longDescription: `An ERC-20-conformant token in 6 lines of code. The \`token\` keyword tells the compiler to auto-synthesize:
+
+- **Fields**: \`supply\`, \`balances\`, \`allowances\`, \`name\`, \`symbol\`, \`decimals\`
+- **Actions**: \`transfer\`, \`approve\`, \`transfer_from\`
+- **Views**: \`balance_of\`, \`allowance\`, \`total_supply\`, \`name\`, \`symbol\`, \`decimals\`
+- **Events**: \`Transfer\`, \`Approval\`
+
+You only write the metadata (name, symbol, decimals, initial supply). The implementation is the ERC-20 spec — no need to copy-paste OpenZeppelin.
+
+\`supply: 1_000_000 to deployer\` mints 1M tokens at deploy time to the deployer's balance.
+
+To customize: write your own \`action transfer(...) { ... }\` after the metadata. The synthesis honors your override.`,
     difficulty: 'beginner',
-    tags: ['basic', 'state'],
-    estimatedReadMinutes: 3,
-    prerequisites: ['Understand what a field is'],
+    tags: ['tokens', 'reference'],
+    estimatedReadMinutes: 4,
+    prerequisites: ['Read A1 — Hello first'],
     tourLessons: ['M1L1', 'M1L2'],
-    sourcePath: '16-simple-counter.cov',
+    sourcePath: 'A2-coin.cov',
     whatToModify: [
-      'Add a maximum limit that count cannot exceed',
-      'Allow decrement only by the deployer',
-      'Track total number of operations (increments + decrements)',
-      'Add a reset action callable only by the owner',
+      'Change the symbol and name to your own token.',
+      'Change `decimals: 18` to `decimals: 6` (USDC-style).',
+      'Change supply to a different number (try `100_000_000` for 100M).',
+      'Add a custom `action burn(value: amount) { /* ... */ }` to allow burning.',
     ],
-    relatedExamples: ['B1', 'B5'],
+    relatedExamples: ['A1', 'A3', 'B2'],
     docsLinks: [
-      { title: 'Guards Reference', url: 'https://docs.covenant-lang.org/reference/language/guards/' },
-      { title: 'Events', url: 'https://docs.covenant-lang.org/reference/language/events/' },
+      { title: 'Token construct', url: 'https://docs.covenant-lang.org/reference/language/token/' },
+      { title: 'ERC-20 spec', url: 'https://eips.ethereum.org/EIPS/eip-20' },
     ],
     deployable: true,
-    gasEstimate: '~110k gas (deploy)',
+    gasEstimate: '~450k gas (deploy)',
     usedInProduction: false,
-  },
-  {
-    id: 'B3',
-    category: 'basics',
-    order: 3,
-    title: 'Simple Coin',
-    shortDescription: 'A standard ERC-20 token using the `token` construct.',
-    longDescription:
-      `The ERC-20 of Covenant. The \`token\` keyword synthesizes the entire transfer/approve/balance surface — you only write the metadata and any custom logic.\n\nFor an encrypted-balance version where amounts are private, see example P1 Confidential Payroll or the ERC-8227 implementation.`,
-    difficulty: 'beginner',
-    tags: ['basic', 'tokens'],
-    estimatedReadMinutes: 4,
-    prerequisites: ['Understand fields'],
-    tourLessons: ['M1L1', 'M1L2', 'M1L3'],
-    sourcePath: '02-coin.cov',
-    whatToModify: [
-      'Add a mint action restricted to the deployer (see D1 for the full pattern)',
-      'Add a burn action that any holder can call',
-      'Add a transfer fee that goes to a treasury address',
-      'Track total number of holders dynamically',
-    ],
-    relatedExamples: ['D1', 'P1'],
-    docsLinks: [
-      { title: 'Token Construct', url: 'https://docs.covenant-lang.org/reference/stdlib/tokens/' },
-      { title: 'ERC-8227 Encrypted Tokens', url: 'https://docs.covenant-lang.org/reference/ercs/erc-8227/' },
-    ],
-    deployable: true,
-    gasEstimate: '~180k gas (deploy)',
-    usedInProduction: true,
-  },
-  {
-    id: 'B4',
-    category: 'basics',
-    order: 4,
-    title: 'Types Reference',
-    shortDescription: 'A non-functional contract demonstrating every Covenant primitive.',
-    longDescription:
-      `This contract doesn't do anything useful — it exists as a reference for the type system. Every primitive type is demonstrated side-by-side so you can copy the exact syntax for any field declaration.\n\nPay attention to the three privacy qualifiers: \`encrypted\` (FHE ciphertext), \`private\` (off-chain witness), \`sealed\` (MPC-sealed state). These map to the three ways Covenant hides data.`,
-    difficulty: 'beginner',
-    tags: ['basic', 'types', 'reference'],
-    estimatedReadMinutes: 4,
-    prerequisites: [],
-    tourLessons: ['M1L4'],
-    sourcePath: '17-types-reference.cov',
-    whatToModify: [
-      'Try changing u8_field to 256 and observe the compile error',
-      'Add a new field of type map<bytes32, address>',
-      'Create a custom struct type and declare a field of it',
-      'Swap text_field for a tuple (text, amount) and update the view',
-    ],
-    relatedExamples: ['B1', 'B5'],
-    docsLinks: [
-      { title: 'Type System Reference', url: 'https://docs.covenant-lang.org/reference/language/types/' },
-      { title: 'Privacy Qualifiers', url: 'https://docs.covenant-lang.org/reference/language/privacy/' },
-    ],
-    deployable: false,
-    usedInProduction: false,
-  },
-  {
-    id: 'B5',
-    category: 'basics',
-    order: 5,
-    title: 'Vault (Actions vs Views)',
-    shortDescription: 'Deposit/withdraw pattern showing actions (mutations) vs views (queries).',
-    longDescription:
-      `Understanding the distinction between actions and views is fundamental in Covenant. Actions cost gas, can mutate state, and are executed via transactions. Views are free, cannot mutate anything, and can be called off-chain.\n\nThis contract demonstrates both side-by-side. The clean separation means users always know what a call does: no hidden state changes in views (unlike Solidity, where a \`view\` can do unexpected things via inline assembly).`,
-    difficulty: 'beginner',
-    tags: ['basic', 'state', 'reference'],
-    estimatedReadMinutes: 5,
-    prerequisites: ['Understand maps'],
-    tourLessons: ['M1L3'],
-    sourcePath: '18-vault.cov',
-    whatToModify: [
-      'Add a withdrawAll action that drains the caller\'s entire balance',
-      'Add a view returning the top-3 depositors',
-      'Reject deposits that would push total_deposited above 1_000_000',
-      'Split into read-only users and admin actions (restrict withdraw)',
-    ],
-    relatedExamples: ['D3', 'B3'],
-    docsLinks: [
-      { title: 'Actions Reference', url: 'https://docs.covenant-lang.org/reference/language/actions/' },
-      { title: 'Views Reference', url: 'https://docs.covenant-lang.org/reference/language/views/' },
-    ],
-    deployable: true,
-    gasEstimate: '~140k gas (deploy)',
-    usedInProduction: true,
   },
 ];

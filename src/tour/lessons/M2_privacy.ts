@@ -85,7 +85,7 @@ record AgeGate {
 }
 `,
     codeSolution: `record AgeGate {
-    field min_age: u8 = 18
+    field min_age: amount = 18
 }
 `,
     objective: 'Coming soon — content being authored.',

@@ -1,142 +1,142 @@
+// Advanced — Sprint 27 rewrite (Phase 27.2)
+//
+// Three examples derived from verified compiler fixtures:
+//   C2 — example_08_amnesia_ceremony.cov  (ERC-8228 lifecycle)
+//   C3 — example_09_encrypted_bridge.cov  (cross-chain escrow with map<>+events)
+//   C4 — example_05_quantum_board.cov     (board + post-quantum signatures)
+
 import type { Example } from './types';
 
 export const advancedExamples: Example[] = [
   {
-    id: 'A1',
+    id: 'C2',
     category: 'advanced',
     order: 1,
-    title: 'Cross-chain Bridge',
-    shortDescription: 'Lock on chain A, attest via validators, claim on chain B.',
-    longDescription:
-      `The canonical bridge pattern. Users lock tokens on chain A. A set of validators attests to the lock on chain B. Once the attestation threshold is reached, the user claims an equivalent amount on chain B.\n\nEvery bridge has the same shape — the attack surface lives in the validator trust assumption. Production bridges (Wormhole, LayerZero, Hyperlane) differ mainly in how they secure and rotate the validator set.`,
-    difficulty: 'advanced',
-    tags: ['bridges', 'cross-chain'],
+    title: 'Amnesia Ceremony',
+    shortDescription:
+      'An ERC-8228 amnesia ceremony with guardian shares. Demonstrates the `ceremony` construct.',
+    longDescription: `Cryptographic amnesia: a ceremony where N guardians each hold a share of a secret, T must agree to reveal, and after \`destroy()\` the secret is provably unrecoverable forever.
+
+The \`ceremony\` keyword auto-synthesizes the entire ERC-8228 lifecycle:
+
+| Function | Returns | Purpose |
+|---|---|---|
+| \`setup()\` | \`uint256\` | initialize ceremony, returns session_id |
+| \`submit_share(bytes32)\` | \`bool\` | a guardian submits their share |
+| \`finalize()\` | \`bool\` | organizer closes share collection |
+| \`destroy()\` | \`bool\` | irrevocably destroy the secret + emit destruction event |
+| \`phase()\` | \`uint256\` | 0=Setup, 1=Active, 2=Finalized, 3=Destroyed |
+| \`session_id()\` | \`uint256\` | the active session id |
+| \`is_destroyed()\` | \`bool\` | true once destroy() was called |
+| \`owner()\` | \`address\` | the ceremony organizer |
+
+You only declare metadata: \`guardians: 3\` (number of share holders) and \`threshold: 2\` (minimum to reconstruct).
+
+The \`on_destroy { destroy(0) }\` block runs when the ceremony reaches the Destroyed phase, generating an irrevocable destruction proof event.
+
+Use cases: trusted setup ceremonies for ZK circuits, cryptographic key sharding, time-locked secret reveals, dead-man-switch contracts.`,
+    difficulty: 'expert',
+    tags: ['Amnesia', 'cross-chain', 'PQ'],
     estimatedReadMinutes: 10,
-    prerequisites: ['Understand multi-sig', 'Understand hash-based IDs'],
-    tourLessons: ['M3L1'],
-    sourcePath: '26-bridge.cov',
+    prerequisites: ['B1 — Shielded Counter', 'C1 — Open Ballot'],
+    tourLessons: ['M3L3'],
+    sourcePath: 'C2-amnesia-ceremony.cov',
     whatToModify: [
-      'Add validator rotation with a governance vote',
-      'Add rate limits (max N locks per block) to cap exploit blast radius',
-      'Support fee-paying claims (relayer covers gas, takes a cut)',
-      'Slash validators who sign invalid attestations',
+      'Increase `guardians: 5` and `threshold: 3` for stronger Byzantine tolerance.',
+      'Try `guardians: 1, threshold: 1` to model a single-key ceremony (no sharding).',
+      'Add a `view ceremony_owner returns address { owner() }` to expose the deployer.',
+      'Remove the `on_destroy` block and observe the lifecycle still works (destroy proof is auto-emitted by stdlib).',
     ],
-    relatedExamples: ['A5', 'D4'],
+    relatedExamples: ['B1', 'C3'],
     docsLinks: [
-      { title: 'Bridge Patterns', url: 'https://docs.covenant-lang.org/cookbook/bridges/' },
+      { title: 'ceremony construct', url: 'https://docs.covenant-lang.org/reference/language/ceremony/' },
+      { title: 'ERC-8228 spec', url: 'https://eips.ethereum.org/EIPS/eip-8228' },
+      { title: 'Amnesia primitives', url: 'https://docs.covenant-lang.org/reference/privacy/amnesia/' },
     ],
     deployable: true,
-    gasEstimate: '~380k gas',
-    usedInProduction: true,
+    gasEstimate: '~480k gas (deploy)',
+    usedInProduction: false,
   },
   {
-    id: 'A2',
+    id: 'C3',
     category: 'advanced',
     order: 2,
-    title: 'Diamond Storage (Upgradeability)',
-    shortDescription: 'Namespaced storage slots for upgrade-safe state across modules.',
-    longDescription:
-      `Storage slots are derived from \`keccak(namespace)\`, not sequential from slot 0. Upgraded implementations can add new fields without ever conflicting with existing state. Covenant makes the namespace an attribute of the record rather than a hand-rolled struct-hash.\n\nThis is the safest pattern for upgradeable contracts — way less error-prone than OpenZeppelin's transparent proxy, and more composable than UUPS.`,
+    title: 'Encrypted Bridge',
+    shortDescription:
+      'A cross-chain asset escrow module. Per-depositor balance tracking with `when` guards.',
+    longDescription: `A foundational cross-chain pattern. Users \`lock\` assets on this side; an off-chain watcher observes the \`Locked\` event and mints/releases on the target chain. \`unlock\` requires a prior lock from the same caller — enforced by the \`when deposits[caller] >= value\` guard.
+
+Three patterns to notice:
+
+**1. \`map<address, amount>\` for per-account state.** \`deposits[caller] += value\` indexes the map by the caller's address. The \`-=\` on unlock ensures balance accuracy.
+
+**2. \`when\` guards for safety.** \`unlock\` reverts before the body runs if \`deposits[caller] < value\`. Cleaner than checking inside the action.
+
+**3. Events for off-chain coordination.** \`emit Locked(caller, value)\` and \`emit Unlocked(caller, value)\` are how the bridge watcher knows what to do on the other side. The events are deterministic: indexed by caller, value as data.
+
+This is the \`module\` construct — no auto-synthesis, every line is yours. For a privacy-preserving variant where amounts are FHE-encrypted, see B3 (PrivateDAO) for the encrypted accumulator pattern.`,
     difficulty: 'advanced',
-    tags: ['upgradeability'],
-    estimatedReadMinutes: 10,
-    prerequisites: ['Understand storage layout', 'Understand proxy patterns'],
+    tags: ['bridges', 'cross-chain', 'defi'],
+    estimatedReadMinutes: 7,
+    prerequisites: ['A3 — Safe Transfer'],
     tourLessons: ['M3L4'],
-    sourcePath: '12-diamond-storage.cov',
+    sourcePath: 'C3-encrypted-bridge.cov',
     whatToModify: [
-      'Add a third module and verify no storage collision',
-      'Migrate a field between modules with a one-shot migration action',
-      'Enforce namespace uniqueness at deploy time via attributes',
-      'Build a storage-layout audit view that dumps all namespaces',
+      'Add a `view total_locked returns amount` that returns the global `locked_total`.',
+      'Add an `error InsufficientLocked(requested: amount, available: amount)` and use `revert_with` instead of the `when` guard.',
+      'Track lock times: add `field lock_times: map<address, time>` and update on each lock.',
+      'Add a `view locked_at(who: address) returns time` query.',
     ],
-    relatedExamples: ['A3'],
+    relatedExamples: ['A3', 'B3'],
     docsLinks: [
-      { title: 'Diamond Pattern', url: 'https://docs.covenant-lang.org/cookbook/upgradeability/diamond/' },
+      { title: 'Cross-chain primitives', url: 'https://docs.covenant-lang.org/reference/cross-chain/' },
+      { title: 'module construct', url: 'https://docs.covenant-lang.org/reference/language/module/' },
     ],
     deployable: true,
-    gasEstimate: '~420k gas',
-    usedInProduction: true,
+    gasEstimate: '~290k gas (deploy)',
+    usedInProduction: false,
   },
   {
-    id: 'A3',
+    id: 'C4',
     category: 'advanced',
     order: 3,
-    title: 'Price Oracle',
-    shortDescription: 'Chainlink-style price feed with staleness checks on every read.',
-    longDescription:
-      `External feeders push price updates. Any contract can read the current price along with a freshness timestamp. Reads revert if the price is stale beyond a configurable tolerance.\n\nThe staleness check is the defense against oracle-failure exploits. Never skip it: a stale price + leveraged position = liquidation loop. This example bakes it into \`get_price()\` so consumers can't accidentally read a frozen feed.`,
-    difficulty: 'advanced',
-    tags: ['oracles', 'integrations'],
-    estimatedReadMinutes: 6,
-    prerequisites: ['Understand time types', 'Understand roles'],
-    tourLessons: ['M3L3'],
-    sourcePath: '27-oracle.cov',
-    whatToModify: [
-      'Aggregate multiple feeders and use the median',
-      'Reject price movements > X% between updates (circuit breaker)',
-      'Emit a digest hash per update for off-chain light-client verification',
-      'Add a TWAP view for consumers who need smoothed prices',
-    ],
-    relatedExamples: ['D5', 'A4'],
-    docsLinks: [],
-    deployable: true,
-    gasEstimate: '~200k gas',
-    usedInProduction: true,
-  },
-  {
-    id: 'A4',
-    category: 'advanced',
-    order: 4,
-    title: 'Uniswap V4 Hook',
-    shortDescription: 'Custom hook for Uniswap V4 pool lifecycle callbacks.',
-    longDescription:
-      `Uniswap V4 introduces hooks: small contracts that run at key pool lifecycle points (beforeSwap, afterModifyLiquidity, etc). This example is a Covenant hook that plugs into a V4 pool.\n\nShowcases Covenant → Solidity interop: Covenant handles the core logic in a typed, declarative way; the hook ABI is auto-generated to match Uniswap's expected interface.`,
-    difficulty: 'advanced',
-    tags: ['defi', 'integrations'],
-    estimatedReadMinutes: 12,
-    prerequisites: ['Understand Uniswap V4', 'Understand hook callbacks'],
-    tourLessons: ['M3L5'],
-    sourcePath: '14-uniswap-hook.cov',
-    whatToModify: [
-      'Add a dynamic fee based on volatility',
-      'Rebate a portion of fees to whitelisted users',
-      'Add a before-swap MEV-protection check via commit-reveal',
-      'Log per-swap analytics to an external aggregator contract',
-    ],
-    relatedExamples: ['D5', 'A3'],
-    docsLinks: [
-      { title: 'Uniswap V4 Hooks', url: 'https://docs.uniswap.org/contracts/v4/overview' },
-    ],
-    deployable: true,
-    gasEstimate: '~600k gas (deploy + register)',
-    usedInProduction: true,
-  },
-  {
-    id: 'A5',
-    category: 'advanced',
-    order: 5,
-    title: 'Shielded Token Bridge',
-    shortDescription: 'Cross-chain transfer of FHE-encrypted tokens — amounts hidden end-to-end.',
-    longDescription:
-      `Combines the bridge pattern (A1) with FHE balances (P1). The amount crossing the bridge is encrypted end-to-end: no validator, no chain observer, no bridge operator can see transfer amounts. A ZK proof attached at claim time binds the ciphertext to a specific recipient without exposing the amount.\n\nThis is the holy grail of privacy-preserving interoperability. It is the category that Covenant's privacy stack enables natively — doing this in Solidity + Noir + ZK-SNARKs would take months of plumbing.`,
+    title: 'Quantum Board',
+    shortDescription:
+      'An append-only message board with post-quantum (Dilithium-5) signatures on every post.',
+    longDescription: `Combines two advanced patterns:
+
+**1. The \`board\` construct.** A nested \`post { ... }\` block defines a record type for entries. \`append post { ... }\` adds a new entry. The list is implicit (\`posts: <list of post>\`); access via \`posts[i]\` and \`posts.length\`.
+
+**2. The \`pq_signed(...)\` guard.** Post-quantum signature verification. Submitting a post requires:
+- Calling \`register(pk: pq_key)\` once to register a Dilithium-5 public key
+- All subsequent \`submit\` calls include a Dilithium signature over the content hash
+- The compiler emits the precompile call for verification
+
+Why post-quantum? Today's Ed25519 / ECDSA signatures will be forgeable once quantum computers reach ~4000 logical qubits. Posts signed with Dilithium-5 today remain verifiable in 2050+.
+
+The \`only registered_key\` qualifier enforces that only addresses with a registered \`pq_key\` can submit. Combined with \`pq_signed(content, sig, keys[caller])\`, posts are authentic and quantum-secure.
+
+In the playground's MockChain, the PQ verification precompile is mocked — any non-empty signature passes. Real chain deployment requires PQ-enabled validators (Aster Chain ships with Dilithium-5 by default).`,
     difficulty: 'expert',
-    tags: ['bridges', 'FHE', 'ZK'],
-    estimatedReadMinutes: 15,
-    prerequisites: ['Understand A1 Bridge', 'Understand P1 FHE', 'Understand P4 ZK'],
-    tourLessons: ['M3L1'],
-    sourcePath: '28-shielded-bridge.cov',
+    tags: ['PQ', 'security'],
+    estimatedReadMinutes: 9,
+    prerequisites: ['B1 — Shielded Counter', 'C2 — Amnesia Ceremony'],
+    tourLessons: ['M2L4'],
+    sourcePath: 'C4-quantum-board.cov',
     whatToModify: [
-      'Add a rate limit expressed in plaintext without revealing individual amounts',
-      'Let users prove their balance-after-transfer is positive via ZK',
-      'Add a regulatory viewing key for selective disclosure to auditors',
-      'Chain two shielded bridges for multi-hop privacy',
+      'Add a `view get_key(who: address) returns pq_key { keys[who] }` to expose registered keys.',
+      'Add a `view total_posts returns amount { posts.length }` (different name from `count`).',
+      'Add an `event PostSubmitted(author: address, idx: amount)` that fires inside `submit`.',
+      'Try removing the `pq_signed` guard — the post is still appended but loses quantum security.',
     ],
-    relatedExamples: ['A1', 'P1', 'P4'],
+    relatedExamples: ['C2', 'C3'],
     docsLinks: [
-      { title: 'Privacy Stack', url: 'https://docs.covenant-lang.org/guides/privacy-stack/' },
+      { title: 'board construct', url: 'https://docs.covenant-lang.org/reference/language/board/' },
+      { title: 'Post-quantum primitives', url: 'https://docs.covenant-lang.org/reference/privacy/pq/' },
+      { title: 'NIST PQC announcement', url: 'https://csrc.nist.gov/projects/post-quantum-cryptography' },
     ],
     deployable: true,
-    gasEstimate: '~4M gas (FHE + ZK)',
+    gasEstimate: '~620k gas (deploy)',
     usedInProduction: false,
   },
 ];

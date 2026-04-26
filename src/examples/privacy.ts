@@ -1,144 +1,87 @@
+// Privacy — Sprint 27 rewrite (Phase 27.2)
+//
+// Two examples derived from verified compiler fixtures:
+//   B1 — example_04_shielded_counter.cov  (encrypted counter — TFHE primitives)
+//   B2 — example_06_secret_coin.cov       (confidential token — ERC-8227)
+
 import type { Example } from './types';
 
 export const privacyExamples: Example[] = [
   {
-    id: 'P1',
+    id: 'B1',
     category: 'privacy',
     order: 1,
-    title: 'Confidential Payroll',
-    shortDescription: 'Pay employees with FHE-encrypted salaries — amounts visible only to the parties.',
-    longDescription:
-      `A payroll contract where each employee's salary is encrypted. The employer can add/remove employees and run payroll, but salaries themselves are ciphertext — only each employee can decrypt their own balance via \`fhe_decrypt()\`.\n\nEven though balances are encrypted, the contract still computes over them: homomorphic addition lets payroll run without revealing any amount. This is a real-world use case — companies want to pay on-chain without exposing salaries to competitors or the public.`,
+    title: 'Shielded Counter (FHE)',
+    shortDescription:
+      'A counter where the value is encrypted on-chain. Increments are homomorphic — no decryption needed.',
+    longDescription: `Demonstrates Covenant's first-class FHE support via the \`encrypted counter\` construct. The \`total\` field is auto-encrypted as a TFHE ciphertext (ERC-8227 handle, 32 bytes on chain). Every observer sees ciphertext bytes; no one except the \`owner\` can see the actual value.
+
+The \`bump(by: amount)\` action uses \`total += by\` — but this is a **homomorphic add**: it operates on the ciphertext directly, no decryption ever happens on chain. The result remains encrypted.
+
+The \`reveal total to owner\` line declares an access policy: only the address designated as \`owner\` can request a threshold-decrypt of the value. On real chain this requires validator consensus (TFHE threshold decryption); in the playground's MockChain it returns a mocked plaintext.
+
+This pattern is the building block for confidential tokens, sealed-bid auctions, and private accumulators of any kind.`,
     difficulty: 'intermediate',
-    tags: ['FHE', 'tokens'],
-    estimatedReadMinutes: 8,
-    prerequisites: ['Understand B3 Simple Coin', 'Understand encrypted types'],
-    tourLessons: ['M2L2'],
-    sourcePath: '09-confidential-payroll.cov',
+    tags: ['FHE', 'reference'],
+    estimatedReadMinutes: 5,
+    prerequisites: ['A1 — Hello'],
+    tourLessons: ['M2L1'],
+    sourcePath: 'B1-shielded-counter.cov',
     whatToModify: [
-      'Support variable payment schedules (weekly, monthly, bi-weekly)',
-      'Add bonuses that are separately encrypted',
-      'Let employees prove their salary is above a threshold without revealing exact amount (ZK)',
-      'Add a total-payroll budget cap that is itself encrypted',
+      'Add a `decrement(by: amount)` action with `total -= by`.',
+      'Add a second encrypted counter (`negatives: amount`) that tracks calls below zero.',
+      'Add a guard `when by > 0` so calls with zero are rejected before touching the ciphertext.',
+      'Change `reveal total to owner` to `reveal total to deployer` — observe the difference (or sameness).',
     ],
-    relatedExamples: ['P2', 'P3', 'B3'],
+    relatedExamples: ['B2', 'B3'],
     docsLinks: [
-      { title: 'Encrypted Tokens (ERC-8227)', url: 'https://docs.covenant-lang.org/reference/ercs/erc-8227/' },
-      { title: 'FHE Intrinsics', url: 'https://docs.covenant-lang.org/reference/stdlib/fhe/' },
+      { title: 'encrypted counter', url: 'https://docs.covenant-lang.org/reference/language/encrypted-counter/' },
+      { title: 'ERC-8227 spec', url: 'https://eips.ethereum.org/EIPS/eip-8227' },
     ],
     deployable: true,
-    gasEstimate: '~2M gas (FHE operations are expensive)',
+    gasEstimate: '~320k gas (deploy)',
     usedInProduction: false,
   },
   {
-    id: 'P2',
+    id: 'B2',
     category: 'privacy',
     order: 2,
-    title: 'Sealed-Bid Auction',
-    shortDescription: 'Every bid is FHE-encrypted until settlement — even the auctioneer cannot peek.',
-    longDescription:
-      `Classic sealed-bid auction where all bids remain encrypted during the bidding phase. At settle time, bids are compared homomorphically to find the max — without decrypting anything except the final winning bid.\n\nThis prevents bid sniping and ensures fair competition. It is the pattern used by privacy-focused NFT marketplaces and commercial procurement platforms where price discovery needs to be fair and confidential.`,
+    title: 'Secret Coin (Confidential Token)',
+    shortDescription:
+      'An ERC-8227 confidential token. Same syntax as `token`, but balances are TFHE ciphertexts.',
+    longDescription: `\`confidential token\` is the FHE-encrypted analog of \`token\`. Same metadata-only declaration; same auto-synthesis pattern; but the balances and allowances are TFHE ciphertexts (ERC-8227 handles) instead of plaintext uint256.
+
+Auto-synthesized surface:
+
+- **Fields**: \`total_supply\` (plaintext), \`balances\` (map<address, ciphertext<amount>>), \`allowances\` (map<hash, ciphertext<amount>>)
+- **Actions**: \`transferEncrypted\`, \`transferFromEncrypted\`, \`approveEncrypted\`
+- **Views**: \`balanceOfEncrypted\`, \`allowanceEncrypted\`, \`totalSupply\`, \`decimals\`, \`symbol\`, \`name\`
+- **Events**: \`TransferEncrypted\`, \`ApprovalEncrypted\`
+
+\`supply: 1_000_000 to deployer\` mints an FHE-encrypted genesis balance to the deployer.
+
+For an external observer, every transfer reveals **only that a transfer happened** — not the amount, not the recipient's new balance. The chain stores nothing decryptable.
+
+In the playground's MockChain, the FHE precompiles are mocked (return deterministic plaintexts) so you can iterate on UX. Real chain deployment requires TFHE-enabled validators.`,
     difficulty: 'intermediate',
-    tags: ['FHE', 'auctions'],
-    estimatedReadMinutes: 10,
-    prerequisites: ['Understand FHE basics'],
-    tourLessons: ['M2L2'],
-    sourcePath: '07-sealed-bid-auction.cov',
-    whatToModify: [
-      'Add a minimum bid requirement (encrypted comparison)',
-      'Support multiple rounds of bidding',
-      'Add a reserve price that triggers cancellation if not met',
-      'Implement Vickrey auction (winner pays 2nd-highest price)',
-    ],
-    relatedExamples: ['P1', 'P3'],
-    docsLinks: [],
-    deployable: true,
-    gasEstimate: '~3M gas (multiple FHE operations)',
-    usedInProduction: false,
-  },
-  {
-    id: 'P3',
-    category: 'privacy',
-    order: 3,
-    title: 'Private Voting',
-    shortDescription: 'DAO vote where individual ballots are encrypted — only the tally is revealed.',
-    longDescription:
-      `Voting with encrypted ballots: each voter submits an encrypted choice, and the contract sums the encrypted votes to produce a final tally without ever decrypting individual votes. Only the aggregate result is public.\n\nThis solves a core governance problem: in on-chain voting today, everyone can see who voted for what, which enables vote-buying and social pressure. Private voting restores the secret ballot.`,
-    difficulty: 'intermediate',
-    tags: ['FHE', 'ZK', 'governance'],
-    estimatedReadMinutes: 10,
-    prerequisites: ['Understand FHE', 'Understand governance patterns'],
-    tourLessons: ['M2L2', 'M2L3'],
-    sourcePath: '08-private-voting.cov',
-    whatToModify: [
-      'Add voter eligibility via a whitelist',
-      'Support quadratic voting (cost = votes²)',
-      'Add a time window for the voting phase',
-      'Require a ZK proof of eligibility without revealing identity',
-    ],
-    relatedExamples: ['G1', 'P2'],
-    docsLinks: [
-      { title: 'Ballot Construct', url: 'https://docs.covenant-lang.org/reference/stdlib/ballot/' },
-    ],
-    deployable: true,
-    gasEstimate: '~2.5M gas',
-    usedInProduction: false,
-  },
-  {
-    id: 'P4',
-    category: 'privacy',
-    order: 4,
-    title: 'ZK Airdrop',
-    shortDescription: 'Claim an airdrop with a ZK membership proof — your identity stays hidden.',
-    longDescription:
-      `Eligible addresses are committed in a Merkle tree. To claim tokens, you submit a ZK proof that your address is in the tree — without revealing which leaf you are. A nullifier hash prevents double-claiming.\n\nThis preserves the privacy of airdrop recipients: no one can see who received tokens or build a list for future targeting. The pattern is used by Aztec, some DEX aggregators, and was famously (mis-)used by Tornado Cash.`,
-    difficulty: 'intermediate',
-    tags: ['ZK', 'tokens'],
-    estimatedReadMinutes: 12,
-    prerequisites: ['Understand ZK basics', 'Understand tokens'],
+    tags: ['FHE', 'tokens'],
+    estimatedReadMinutes: 5,
+    prerequisites: ['A2 — Coin', 'B1 — Shielded Counter'],
     tourLessons: ['M2L3'],
-    sourcePath: '10-zk-airdrop.cov',
+    sourcePath: 'B2-secret-coin.cov',
     whatToModify: [
-      'Support multiple airdrop rounds with different eligibility sets',
-      'Add vesting to claimed tokens',
-      'Require an additional proof of wallet activity in the last 90 days',
-      'Let claimers anonymously donate part of their airdrop',
+      'Change name to "MyConfToken" and symbol to "MCT".',
+      'Change decimals to 6 (USDC-style).',
+      'Try a smaller supply: `supply: 1_000 to deployer`.',
+      'Add an explicit `action burnEncrypted(value: amount) { /* TODO */ }` to override the default behavior.',
     ],
-    relatedExamples: ['P5', 'D1'],
+    relatedExamples: ['A2', 'B1', 'B3'],
     docsLinks: [
-      { title: 'verified_by Guard', url: 'https://docs.covenant-lang.org/reference/language/guards/#verified-by' },
-      { title: 'ZK Examples', url: 'https://docs.covenant-lang.org/cookbook/zero-knowledge/' },
+      { title: 'confidential token', url: 'https://docs.covenant-lang.org/reference/language/confidential-token/' },
+      { title: 'ERC-8227 spec', url: 'https://eips.ethereum.org/EIPS/eip-8227' },
     ],
     deployable: true,
-    gasEstimate: '~180k gas + ~350k proof verification',
-    usedInProduction: true,
-  },
-  {
-    id: 'P5',
-    category: 'privacy',
-    order: 5,
-    title: 'Private Identity',
-    shortDescription: 'Prove claims about yourself (age, country, credentials) without revealing details.',
-    longDescription:
-      `Identity verification without disclosure. A user holds a verifiable credential issued by a trusted authority. They generate ZK proofs of claims about that credential — "age > 18", "citizenship X", "accredited investor" — without revealing the underlying data.\n\nThis is self-sovereign identity: you hold your credentials, and you choose what to prove without exposing raw data. Real-world use: KYC for DeFi, age gates for online services, GDPR-compliant data minimization.`,
-    difficulty: 'advanced',
-    tags: ['ZK', 'identity'],
-    estimatedReadMinutes: 15,
-    prerequisites: ['Understand ZK', 'Understand verified_by guards'],
-    tourLessons: ['M2L3'],
-    sourcePath: '29-identity.cov',
-    whatToModify: [
-      'Add a credential revocation mechanism',
-      'Support multi-claim composition (age AND country AND accreditation)',
-      'Add time-based credential validity (expires after N)',
-      'Integrate with a real KYC provider via oracle',
-    ],
-    relatedExamples: ['P4'],
-    docsLinks: [
-      { title: 'Self-Sovereign Identity', url: 'https://docs.covenant-lang.org/guides/identity/' },
-    ],
-    deployable: true,
-    gasEstimate: '~500k gas (complex ZK proofs)',
+    gasEstimate: '~520k gas (deploy)',
     usedInProduction: false,
   },
 ];
