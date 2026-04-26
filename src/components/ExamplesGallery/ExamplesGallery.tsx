@@ -1,9 +1,11 @@
 /**
- * Examples Gallery — full-page route at /examples (Sprint 19).
+ * Examples Gallery — full-page route at /examples (Sprint 19, refreshed Sprint 27).
  *
  * Replaces the original modal gallery (src/lib/examples.ts). This version
- * is driven by the richer `src/examples/registry.ts` with 25 curated
- * examples across 5 categories, search + filter + detail panel.
+ * is driven by `src/examples/registry.ts` — a curated set of fixture-derived
+ * examples across 5 categories, search + filter + detail panel. The exact
+ * count is read from `getGalleryStats().total` so the UI never lies about
+ * how many contracts ship.
  */
 import { useMemo, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -139,7 +141,7 @@ export function ExamplesGallery() {
           Examples Gallery
         </h1>
         <p className="eg-hero-subtitle">
-          25 annotated contracts across 5 categories — from the minimal
+          {stats.total} annotated contracts across 5 categories — from the minimal
           Hello Covenant to cross-chain shielded bridges. Each example
           ships with background, modifications to try, and a direct launch
           into the playground.
