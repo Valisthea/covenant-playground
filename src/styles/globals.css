@@ -2251,3 +2251,91 @@ body {
   border-radius: 2px;
 }
 
+
+/* PRELIM-008: post-deploy success banner — prominent confirmation
+   right under the Deploy button so the new contract address is
+   unmissable. */
+.deploy-success-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  margin: 6px 0 0;
+  background: rgba(22, 163, 74, 0.08);     /* green-tinted, --success */
+  border-left: 3px solid var(--success);
+  border-radius: 3px;
+  font-size: 9pt;
+}
+.deploy-success-banner--sepolia {
+  background: rgba(22, 163, 74, 0.10);
+  border-left-color: var(--success);
+}
+.deploy-success-banner__check {
+  font-weight: 600;
+  color: var(--success);
+  font-size: 12pt;
+  line-height: 1;
+}
+.deploy-success-banner__body {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+.deploy-success-banner__title {
+  font-family: var(--font-mono);
+  font-size: 7.5pt;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-mute);
+  white-space: nowrap;
+}
+.deploy-success-banner__addr {
+  font-family: var(--font-mono);
+  font-size: 9pt;
+  color: var(--ink);
+  background: rgba(22, 163, 74, 0.08);
+  padding: 1px 6px;
+  border-radius: 2px;
+  cursor: help;
+}
+.deploy-success-banner__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.deploy-success-banner__link,
+.deploy-success-banner__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--font-mono);
+  font-size: 8pt;
+  text-decoration: none;
+  color: var(--accent);
+  background: none;
+  border: 1px solid var(--rule-faint);
+  border-radius: 3px;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+.deploy-success-banner__link:hover,
+.deploy-success-banner__cta:hover {
+  color: var(--ink);
+  border-color: var(--accent);
+  background: rgba(124, 58, 237, 0.05);
+}
+.deploy-success-banner__dismiss {
+  background: none;
+  border: 0;
+  color: var(--ink-faint);
+  cursor: pointer;
+  padding: 2px;
+  display: inline-flex;
+  align-items: center;
+}
+.deploy-success-banner__dismiss:hover {
+  color: var(--ink);
+}
