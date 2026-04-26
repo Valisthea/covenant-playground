@@ -2339,3 +2339,94 @@ body {
 .deploy-success-banner__dismiss:hover {
   color: var(--ink);
 }
+
+/* ─── CrossTabIndicator (V0.9 Sprint 36) ───────────────────────────── */
+
+.pg-cross-tab-indicator-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-right: 12px;
+}
+
+.pg-cross-tab-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--ink-mute, #6b7280);
+  background: var(--surface-overlay, rgba(124, 58, 237, 0.06));
+  border: 1px solid var(--border, rgba(124, 58, 237, 0.18));
+  border-radius: 12px;
+  cursor: default;
+  transition: background 180ms ease, border-color 180ms ease, color 180ms ease;
+  user-select: none;
+}
+
+.pg-cross-tab-indicator.is-syncing {
+  background: rgba(124, 58, 237, 0.18);
+  border-color: rgba(124, 58, 237, 0.5);
+  color: #7C3AED;
+}
+
+.pg-cross-tab-count {
+  letter-spacing: 0.02em;
+}
+
+.pg-cross-tab-pulse {
+  margin-left: 4px;
+  padding: 1px 5px;
+  background: #7C3AED;
+  color: #fff;
+  border-radius: 6px;
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  animation: cross-tab-pulse-fade 2s ease-out forwards;
+}
+
+@keyframes cross-tab-pulse-fade {
+  0%   { opacity: 1; transform: scale(1); }
+  20%  { opacity: 1; transform: scale(1.05); }
+  100% { opacity: 0; transform: scale(0.95); }
+}
+
+.pg-cross-tab-tooltip {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  width: 280px;
+  padding: 10px 12px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--ink, #1f2937);
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.12));
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  z-index: 200;
+  animation: cross-tab-tooltip-in 120ms ease-out;
+}
+
+.pg-cross-tab-tooltip strong {
+  display: block;
+  margin-bottom: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #7C3AED;
+}
+
+.pg-cross-tab-tooltip p {
+  margin: 0 0 4px 0;
+}
+
+@keyframes cross-tab-tooltip-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
