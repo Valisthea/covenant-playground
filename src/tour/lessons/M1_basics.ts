@@ -384,7 +384,7 @@ Covenant's types are designed for the realities of smart contracts: big numbers,
 
 ## A note on numeric types
 
-Covenant's V0.8 numeric type is \`amount\` (semantically a uint256). Solidity-style fixed bit-widths like \`uint8\` / \`uint64\` are not part of the language today. If you need to enforce a smaller range, use \`amount\` and add a \`when value <= 255\` guard.
+Covenant's V0.9 numeric type is \`amount\` (semantically a uint256). Solidity-style fixed bit-widths like \`uint8\` / \`uint64\` are not part of the language today. If you need to enforce a smaller range, use \`amount\` and add a \`when value <= 255\` guard.
 
 ## One return value per view
 
@@ -424,7 +424,7 @@ record TokenInfo {
 
     hints: [
       '`name` and `symbol` are strings → `text`',
-      '`decimals` is a small non-negative number → `amount` (V0.8 has no fixed bit-widths)',
+      '`decimals` is a small non-negative number → `amount` (V0.9 has no fixed bit-widths)',
       '`total_supply` is a huge number → `amount`',
       'Initialize each with `= default_value` after the type',
     ],

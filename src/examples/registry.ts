@@ -13,6 +13,7 @@ import { defiExamples } from './defi';
 import { privacyExamples } from './privacy';
 import { governanceExamples } from './governance';
 import { advancedExamples } from './advanced';
+import { v09NewExamples } from './v09-new';
 
 // ─── Master registry ────────────────────────────────────────────────────────
 
@@ -22,6 +23,7 @@ export const ALL_EXAMPLES: Example[] = [
   ...privacyExamples,
   ...governanceExamples,
   ...advancedExamples,
+  ...v09NewExamples,
 ];
 
 // Pre-indexed map for O(1) ID lookup.

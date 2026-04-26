@@ -10,9 +10,10 @@ export type ExampleTag =
   | 'bridges' | 'cross-chain' | 'security' | 'identity'
   | 'oracles' | 'upgradeability' | 'integrations'
   | 'auctions' | 'recovery' | 'time' | 'state'
-  | 'types' | 'reference' | 'no-privacy' | 'advanced-patterns';
+  | 'types' | 'reference' | 'no-privacy' | 'advanced-patterns'
+  | 'erc721' | 'erc8231' | 'interface' | 'v09'; // V0.9 additions
 
-export type ExampleCategory = 'basics' | 'defi' | 'privacy' | 'governance' | 'advanced';
+export type ExampleCategory = 'basics' | 'defi' | 'privacy' | 'governance' | 'advanced' | 'v09-new';
 
 /**
  * A curated example. Source code is fetched lazily from
@@ -81,6 +82,7 @@ export function categoryLabel(cat: ExampleCategory): string {
     privacy: 'Privacy',
     governance: 'Governance',
     advanced: 'Advanced',
+    'v09-new': 'V0.9 New',
   };
   return labels[cat];
 }

@@ -38,7 +38,7 @@ This is the right starting point for any Covenant developer. Read the source, th
     ],
     relatedExamples: ['A2', 'A3'],
     docsLinks: [
-      { title: 'Real Covenant Syntax (V0.8)', url: 'https://github.com/Valisthea/covenant-playground/blob/main/docs/REAL_COVENANT_SYNTAX.md' },
+      { title: 'Real Covenant Syntax (V0.9)', url: 'https://github.com/Valisthea/covenant-playground/blob/main/docs/REAL_COVENANT_SYNTAX.md' },
       { title: 'docs.covenant-lang.org', url: 'https://docs.covenant-lang.org' },
     ],
     deployable: true,
