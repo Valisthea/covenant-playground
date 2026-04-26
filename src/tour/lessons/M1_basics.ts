@@ -38,13 +38,13 @@ record MyContract {
         some_data = new_value
     }
 
-    view read_data() returns text {
+    view read_data returns text {
         some_data
     }
 }
 \`\`\`
 
-Notice: no \`function\` keyword, no \`public\`/\`external\` modifiers. Covenant infers what it needs. Now write yours.
+Notice: no \`function\` keyword, no \`public\`/\`external\` modifiers. Covenant infers what it needs. Also: views with **zero arguments don't take parentheses** — write \`view read_data returns text\`, not \`view read_data() returns text\`. Now write yours.
 `,
 
     codeStarter: `-- Your first Covenant contract
@@ -58,7 +58,7 @@ record HelloCovenant {
     --   • restricts to deployer only
     --   • sets greeting = new_greeting
 
-    view read() returns text {
+    view read returns text {
         greeting
     }
 }
@@ -71,7 +71,7 @@ record HelloCovenant {
         greeting = new_greeting
     }
 
-    view read() returns text {
+    view read returns text {
         greeting
     }
 }
@@ -171,9 +171,9 @@ record Counter {
         last_updater = caller
     }
 
-    view state() returns (amount, address, amount) {
-        (count, last_updater, total_updates)
-    }
+    view get_count returns amount { count }
+    view get_last_updater returns address { last_updater }
+    view get_total_updates returns amount { total_updates }
 }
 `,
 
@@ -252,8 +252,8 @@ action deposit(value: amount) {
     balance = balance + value
 }
 
--- View: reads state, free
-view get_balance() returns amount {
+-- View: reads state, free  (no parens for zero-arg views)
+view get_balance returns amount {
     balance
 }
 \`\`\`
@@ -292,7 +292,7 @@ Notice: the last expression in a view **is** the return value — no \`return\` 
     -- TODO 2: view \`balance_of(who: address) returns amount\`
     --   • returns deposits[who]
 
-    -- TODO 3: view \`get_total() returns amount\`
+    -- TODO 3: view \`get_total returns amount\`  (zero-arg view → no parens)
     --   • returns total_deposited
 }
 `,
@@ -310,7 +310,7 @@ Notice: the last expression in a view **is** the return value — no \`return\` 
         deposits[who]
     }
 
-    view get_total() returns amount {
+    view get_total returns amount {
         total_deposited
     }
 }
@@ -321,7 +321,7 @@ Notice: the last expression in a view **is** the return value — no \`return\` 
     hints: [
       'Map assignment: `deposits[caller] = deposits[caller] + value`',
       'View return: last expression is the return value, no `return` keyword',
-      'Two views needed: one with a parameter, one without',
+      'Two views needed: one with a parameter (`view balance_of(who: address) returns amount`), one without (`view get_total returns amount` — no parens for zero-arg)',
     ],
 
     validator: {
@@ -331,7 +331,8 @@ Notice: the last expression in a view **is** the return value — no \`return\` 
           /action\s+deposit\s*\(\s*value\s*:\s*amount\s*\)/i.test(source) &&
           /deposits\s*\[\s*caller\s*\]/i.test(source);
         const hasBalanceOf = /view\s+balance_of\s*\(\s*who\s*:\s*address\s*\)\s*returns\s+amount/i.test(source);
-        const hasGetTotal = /view\s+get_total\s*\(\s*\)\s*returns\s+amount/i.test(source);
+        // Accept both canonical (no parens) and tolerated (empty parens) forms for zero-arg views.
+        const hasGetTotal = /view\s+get_total\s*(?:\(\s*\)\s*)?returns\s+amount/i.test(source);
 
         if (hasDeposit && hasBalanceOf && hasGetTotal) {
           return { passed: true, message: '✓ Action and both views implemented correctly!' };
@@ -340,7 +341,7 @@ Notice: the last expression in a view **is** the return value — no \`return\` 
         const missing: string[] = [];
         if (!hasDeposit) missing.push('`action deposit` (with deposits[caller] update)');
         if (!hasBalanceOf) missing.push('`view balance_of(who: address)`');
-        if (!hasGetTotal) missing.push('`view get_total()`');
+        if (!hasGetTotal) missing.push('`view get_total returns amount`');
 
         return {
           passed: false,
@@ -477,12 +478,14 @@ action withdraw() when now >= unlock_time { ... }
 action transfer(to: address) when caller == owner { ... }
 \`\`\`
 
-### \`only\` — predefined role
-Two predefined role qualifiers verified in V0.8 fixtures:
+### \`only\` — predefined principal / role
+Built-in qualifiers (no extra storage required, the compiler wires them):
+- \`only deployer\` — caller is the address that deployed the contract (used in M1L1)
+- \`only owner\` — caller equals the contract's \`owner\` principal (built-in for constructs that auto-manage an owner field, e.g. \`token\`, \`vault\`)
 - \`only first_time_caller\` — caller hasn't called this action before
-- \`only registered_key\` — caller has a registered \`pq_key\` (board pattern)
+- \`only registered_key\` — caller is in the registered \`pq_key\` set (board / registry pattern)
 
-For custom identity checks (e.g., owner), use \`when caller == owner_field\` instead.
+For arbitrary identity checks not covered above, drop down to \`when caller == some_field\`.
 
 ### \`given\` — value-in-set
 Validates an argument belongs to a declared collection.
