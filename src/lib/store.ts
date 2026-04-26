@@ -448,6 +448,20 @@ export const useStore = create<State>((set, get) => ({
       // eth_call — free, fast, no popup.
       try {
         const r = await staticCallOnSepolia(wallet.address, activeContract, calldata);
+
+        // Sprint 26 audit (KSR-CVN-PRELIM-002): if the wallet drifted
+        // off Sepolia between connect and this view call, the eth_call
+        // ran against a wrong network and the result is misleading.
+        // Surface that explicitly so the InteractionPanel UI can warn
+        // the user instead of silently presenting wrong data.
+        const SEPOLIA_HEX = '0xaa36a7';
+        const onWrongChain =
+          r.observedChainId !== null &&
+          r.observedChainId.toLowerCase() !== SEPOLIA_HEX;
+        const networkWarning = onWrongChain
+          ? `eth_call ran against chain ${r.observedChainId}, not Sepolia (${SEPOLIA_HEX}). Result may not reflect Sepolia state.`
+          : undefined;
+
         const receipt: TxReceipt = {
           hash: '0x' + '0'.repeat(64),
           blockNumber: 0,
@@ -459,7 +473,12 @@ export const useStore = create<State>((set, get) => ({
           args,
           gasUsed: 0n,
           status: r.ok ? 'success' : 'reverted',
-          revertReason: r.ok ? undefined : r.revertReason,
+          // Stack the network warning on top of any revert reason so the
+          // user sees both signals in the UI.
+          revertReason:
+            !r.ok
+              ? [networkWarning, r.revertReason].filter(Boolean).join(' — ')
+              : networkWarning,
           events: [],
         };
         if (r.ok && r.returnDataHex && r.returnDataHex !== '0x') {

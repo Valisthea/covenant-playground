@@ -2222,3 +2222,32 @@ body {
   margin: 8px 0;
   border-left: 2px solid #DC3545;
 }
+
+/* ──────────────────────────────────────────────────────────────────
+   Sprint 26 audit Session 2 fixes
+   ────────────────────────────────────────────────────────────────── */
+
+/* PRELIM-005: MockChain cross-contract limitation disclosure on every
+   deployable example in the gallery. Subtle but unmissable. */
+.eg-detail-mockchain-note {
+  margin: 16px 0 0;
+  padding: 10px 12px;
+  background: rgba(217, 119, 6, 0.08);   /* amber-tinted, matches --warn */
+  border-left: 3px solid var(--warn);
+  font-size: 9pt;
+  line-height: 1.55;
+  color: var(--ink);
+  border-radius: 3px;
+}
+.eg-detail-mockchain-note strong {
+  color: var(--warn);
+  font-weight: 600;
+}
+.eg-detail-mockchain-note code {
+  font-family: var(--font-mono);
+  font-size: 8pt;
+  background: rgba(217, 119, 6, 0.12);
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+

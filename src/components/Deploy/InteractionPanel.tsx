@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../../lib/store';
 import {
   shortAddress,
@@ -82,18 +82,46 @@ function ActionRow({
   target: 'mockchain' | 'sepolia';
 }) {
   const callAction = useStore((s) => s.callAction);
+  // Sprint 26 audit (KSR-CVN-PRELIM-007): subscribe to sepoliaTxs so
+  // we can hydrate `lastResult` once the async tx confirms — without
+  // this, every Sepolia action call left the inline result block
+  // empty even though the data was sitting in TxHistoryPane.
+  const sepoliaTxs = useStore((s) => s.sepoliaTxs);
   const [args, setArgs] = useState<string>('');
   const [lastResult, setLastResult] = useState<TxReceipt | null>(null);
+  // Capture the moment the user clicked Call, so we can match the
+  // resulting Sepolia receipt by timestamp window without false
+  // positives from earlier txs of the same action.
+  const callStartedAtRef = useRef<number>(0);
 
   const onCall = () => {
     const parsed = args.trim()
       ? args.split(',').map((s) => s.trim())
       : [];
+    callStartedAtRef.current = Math.floor(Date.now() / 1000);
     const receipt = callAction(fn.name, parsed);
-    // Sepolia returns null synchronously (the receipt arrives via the
-    // store's chainRev bump). MockChain returns the receipt directly.
+    // MockChain returns the receipt synchronously. Sepolia returns null
+    // here; the matching receipt arrives via sepoliaTxs (handled by
+    // the useEffect below).
     if (receipt) setLastResult(receipt);
   };
+
+  // Sepolia hydration: when a new tx with this action's name lands in
+  // sepoliaTxs after `callStartedAt`, surface it inline. Skipped on
+  // MockChain because callAction already populated lastResult sync.
+  useEffect(() => {
+    if (target !== 'sepolia') return;
+    if (callStartedAtRef.current === 0) return;
+    // sepoliaTxs is newest-first per the store. Find the first tx for
+    // this action since the click; ignore stale matches from earlier
+    // calls of the same action name.
+    const match = sepoliaTxs.find(
+      (tx) => tx.action === fn.name && tx.timestamp >= callStartedAtRef.current,
+    );
+    if (match && match !== lastResult) {
+      setLastResult(match);
+    }
+  }, [sepoliaTxs, target, fn.name, lastResult]);
 
   const buttonClass = isView
     ? 'pg-btn pg-btn--ghost pg-btn--sm'
