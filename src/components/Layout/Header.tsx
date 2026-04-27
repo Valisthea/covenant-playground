@@ -1,6 +1,7 @@
 import { Layers } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useStore } from '../../lib/store';
+import { GALLERY_SIZE } from '../../examples/registry';
 import { ThemeToggle } from './ThemeToggle';
 import { LayoutToggle } from './LayoutToggle';
 import { CrossTabIndicator } from './CrossTabIndicator';
@@ -61,7 +62,7 @@ export function Header({ onOpenGallery, onOpenShare }: Props) {
           <span>Architecture</span>
         </button>
         <button className="pg-btn" onClick={onOpenGallery} type="button">
-          Examples (25)
+          Examples ({GALLERY_SIZE})
         </button>
         <Link className="pg-btn" to="/contract">
           My Contract
