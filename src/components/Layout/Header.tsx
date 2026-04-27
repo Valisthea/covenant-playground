@@ -63,6 +63,9 @@ export function Header({ onOpenGallery, onOpenShare }: Props) {
         <button className="pg-btn" onClick={onOpenGallery} type="button">
           Examples (25)
         </button>
+        <Link className="pg-btn" to="/contract">
+          My Contract
+        </Link>
         <Link className="pg-btn" to="/showcases">
           Showcases
         </Link>

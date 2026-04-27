@@ -11,7 +11,9 @@
     { "source": "/tour", "destination": "/index.html" },
     { "source": "/tour/:lessonId", "destination": "/index.html" },
     { "source": "/showcases", "destination": "/index.html" },
-    { "source": "/showcases/:id", "destination": "/index.html" }
+    { "source": "/showcases/:id", "destination": "/index.html" },
+    { "source": "/contract", "destination": "/index.html" },
+    { "source": "/contract/:chain/:address", "destination": "/index.html" }
   ],
   "headers": [
     {

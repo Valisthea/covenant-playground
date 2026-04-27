@@ -14,6 +14,7 @@ import './lib/register-sw';
 import App from './App';
 import './styles/globals.css';
 import './styles/showcases.css';
+import './styles/contract.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

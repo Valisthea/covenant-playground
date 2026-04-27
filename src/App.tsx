@@ -8,6 +8,8 @@ import { LayerExplorer } from './components/LayerExplorer/LayerExplorer';
 import { ExamplesGallery } from './components/ExamplesGallery/ExamplesGallery';
 import { ShowcasesIndex } from './components/Showcases/ShowcasesIndex';
 import { M2NFTPage } from './components/Showcases/M2NFTPage';
+import { ContractLanding } from './components/Contract/ContractLanding';
+import { ContractInspector } from './components/Contract/ContractInspector';
 import type { LayerId } from './lib/layer-analysis';
 import { ShareDialog } from './components/Share/ShareDialog';
 import { OnboardingTour } from './components/Onboarding/OnboardingTour';
@@ -255,6 +257,8 @@ export default function App() {
       <Route path="/examples" element={<ExamplesGallery />} />
       <Route path="/showcases" element={<ShowcasesIndex />} />
       <Route path="/showcases/m2-nft" element={<M2NFTPage />} />
+      <Route path="/contract" element={<ContractLanding />} />
+      <Route path="/contract/:chain/:address" element={<ContractInspector />} />
       <Route path="*" element={<Playground />} />
     </Routes>
   );
