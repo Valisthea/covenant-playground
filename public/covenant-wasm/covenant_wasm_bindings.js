@@ -1,3 +1,5 @@
+/* @ts-self-types="./covenant_wasm_bindings.d.ts" */
+
 /**
  * Move the chain clock forward by `seconds`.
  * @param {bigint} seconds
@@ -136,6 +138,9 @@ export function check(source) {
 /**
  * Compile a Covenant source string targeting EVM bytecode.
  *
+ * Backward-compatible V0.8 entry point: defaults to `mockchain` target.
+ * New code should call [`compile_to_evm_for_target`] explicitly.
+ *
  * Returns a JS object matching the `JsCompileResult` schema.
  * Panics are caught by `console_error_panic_hook` and surface as
  * JS exceptions; the playground catches those and shows a generic
@@ -147,6 +152,32 @@ export function compile_to_evm(source) {
     const ptr0 = passStringToWasm0(source, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
     const len0 = WASM_VECTOR_LEN;
     const ret = wasm.compile_to_evm(ptr0, len0);
+    return ret;
+}
+
+/**
+ * Compile a Covenant source string targeting EVM bytecode with an
+ * explicit chain target (V0.9, Sprint 31).
+ *
+ * `target` accepts:
+ *   - `"mockchain"` / `"mock"` / `"evm"` → V0.8 in-tab MockChain
+ *   - `"sepolia"`                        → V0.9 helpers on Sepolia
+ *   - `"aster_testnet"`                  → V0.9 helpers on Aster Testnet
+ *   - `"mainnet"`                        → REJECTED (single E601 diag)
+ *
+ * The playground's Chain Target dropdown should call this for any
+ * non-MockChain target; MockChain can use the parameterless
+ * [`compile_to_evm`] for backward compat.
+ * @param {string} source
+ * @param {string} target
+ * @returns {any}
+ */
+export function compile_to_evm_for_target(source, target) {
+    const ptr0 = passStringToWasm0(source, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passStringToWasm0(target, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ret = wasm.compile_to_evm_for_target(ptr0, len0, ptr1, len1);
     return ret;
 }
 

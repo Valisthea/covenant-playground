@@ -438,15 +438,23 @@ export function M2NFTPage() {
           </div>
 
           <aside className="m2-empirical-note">
-            <strong>Note — empirical finding from this contract:</strong>{' '}
-            V0.9.0&apos;s auto-synthesized <code>transferFrom</code> does
-            NOT check <code>to != address(0)</code>. A burn-via-zero call
-            succeeds and creates state where <code>balanceOf(0x0) {`>`} 0</code>{' '}
-            — non-conforming to strict ERC-721 semantics. See{' '}
+            <strong>Note — this contract predates the V0.9.2 hardening.</strong>{' '}
+            It was compiled with V0.9.0, whose auto-synthesized{' '}
+            <code>transferFrom</code> did not enforce caller authorization and
+            did not check <code>to != address(0)</code> (a burn-via-zero call
+            succeeds, leaving <code>balanceOf(0x0) {`>`} 0</code>). The V0.9.2
+            audit fixed both: new compiles require the caller to be the owner,
+            an approved address, or an operator, add an explicit{' '}
+            <code>burn</code>, and revert on the zero address. Already-deployed
+            V0.9.0/V0.9.1 bytecode is immutable, so this testnet demo keeps the
+            original permissive behavior. See{' '}
             <a href={M2_NFT.githubMilestone} target="_blank" rel="noopener noreferrer">
               MILESTONES.md M2
             </a>{' '}
-            and the <code>DEBT.md</code> V0.9.1 fix candidate.
+            and the{' '}
+            <a href="https://github.com/Valisthea/covenant/blob/main/CHANGELOG.md" target="_blank" rel="noopener noreferrer">
+              CHANGELOG
+            </a>.
           </aside>
         </section>
       </div>
