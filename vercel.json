@@ -13,7 +13,8 @@
     { "source": "/showcases", "destination": "/index.html" },
     { "source": "/showcases/:id", "destination": "/index.html" },
     { "source": "/contract", "destination": "/index.html" },
-    { "source": "/contract/:chain/:address", "destination": "/index.html" }
+    { "source": "/contract/:chain/:address", "destination": "/index.html" },
+    { "source": "/verify", "destination": "/index.html" }
   ],
   "headers": [
     {

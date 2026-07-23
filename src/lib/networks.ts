@@ -93,9 +93,33 @@ export const NETWORKS: Record<string, NetworkConfig> = {
     nativeSymbol: 'ETH',
     testnet: false,
   },
+  // Robinhood Chain — Arbitrum Orbit L2, the featured deploy target since the
+  // M6 milestone. All four values below verified live via eth_chainId
+  // (2026-07-23): the docs page renders the testnet hex as 0xB616, which is
+  // wrong — it decodes to 46614. The chain itself answers 0xb626.
+  'robinhood-testnet': {
+    id: 'robinhood-testnet',
+    label: 'Robinhood Chain (testnet)',
+    chainId: 46630,
+    chainIdHex: '0xb626',
+    publicRpc: 'https://rpc.testnet.chain.robinhood.com',
+    explorerBase: 'https://explorer.testnet.chain.robinhood.com',
+    nativeSymbol: 'ETH',
+    testnet: true,
+  },
+  robinhood: {
+    id: 'robinhood',
+    label: 'Robinhood Chain (mainnet)',
+    chainId: 4663,
+    chainIdHex: '0x1237',
+    publicRpc: 'https://rpc.mainnet.chain.robinhood.com',
+    explorerBase: 'https://robinhoodchain.blockscout.com',
+    nativeSymbol: 'ETH',
+    testnet: false,
+  },
   aster: {
     id: 'aster',
-    label: 'Aster Chain (mainnet) — V0.9.x deploy pending',
+    label: 'Aster Chain (mainnet)',
     chainId: 1996,
     chainIdHex: '0x7cc',
     publicRpc: 'https://tapi.asterdex.com', // confirm exact endpoint
