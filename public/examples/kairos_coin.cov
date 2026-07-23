@@ -1,3 +1,15 @@
+-- PRODUCTION BUILD — no test actions.
+--
+-- Covenant V0.9 has no `#[cfg(test)]` equivalent: a test is a plain
+-- `action test_X() when <assert> {}`, so it compiles into the deployed
+-- contract as a public function. Keeping tests here would ship them
+-- on-chain (this is exactly what M6's first deployment revealed — see
+-- DEBT.md "Test actions ship in the deployed contract").
+--
+-- So the tests live in kairos_coin.test.cov, which is this same contract
+-- plus the test actions. The duplication is the honest cost of the missing
+-- feature; delete it once release-mode test stripping lands.
+--
 -- KairosCoin.cov · an ERC-20 with burn, a configurable transfer fee, and
 -- on-chain accounting — written in Covenant, deployed on Robinhood Chain testnet.
 --
@@ -96,43 +108,4 @@ token KairosCoin {
     view fee_rate_bps returns amount {
         fee_bps
     }
-
-    -- ─────────────────────────────────────────────────────────────────────
-    -- Tests.  Run: covenant test coin.cov
-    --
-    -- V0.9 test pattern: `action test_X() when <assertion> {}` — the `when`
-    -- guard IS the assertion (holds = pass, fails = revert = fail), and the
-    -- body is empty to avoid side effects mid-assertion. Each test_* runs
-    -- against a fresh instance (per-test isolation).
-    --
-    -- HONEST LIMITATION: because the guard fires BEFORE the body and state
-    -- is reset between tests, this harness cannot express "mutate, then
-    -- assert the result" in a single test. So these tests pin the deploy-time
-    -- invariants; the burn/fee *arithmetic* is exercised on-chain instead
-    -- (see the deploy script's burn / transfer_with_fee calls). A richer
-    -- assert API is V0.9.x backlog.
-    -- ─────────────────────────────────────────────────────────────────────
-
-    -- Genesis mint landed in total_supply, and confirms `supply:` mints RAW
-    -- base units (1e24 raw = 1,000,000 whole tokens at 18 decimals).
-    action test_genesis_supply_minted()
-            when total_supply == 1_000_000_000_000_000_000_000_000 {}
-
-    -- Fee is 0 until set_fee is called. This test documents a REAL compiler
-    -- finding: non-zero field defaults are silently dropped at deploy
-    -- (verified on anvil), so the safe reading is "0 until configured".
-    action test_fee_bps_is_zero_until_configured() when fee_bps == 0 {}
-
-    -- Burn accounting starts clean.
-    action test_burn_counter_starts_at_zero() when total_burned == 0 {}
-
-    -- Fee accounting starts clean.
-    action test_fees_collected_starts_at_zero() when fee_collected == 0 {}
-
-    -- Encodes the operational footgun: fee_recipient is the zero address
-    -- until set_fee is called, so transfer_with_fee must not be used before
-    -- configuration. The deploy script calls set_fee immediately for exactly
-    -- this reason.
-    action test_fee_recipient_unset_at_deploy()
-            when fee_recipient == 0x0000000000000000000000000000000000000000 {}
 }

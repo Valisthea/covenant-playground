@@ -17,7 +17,7 @@ import { networkOptions } from '../../lib/networks';
 import { verifyContract, type VerifyResult } from '../../lib/verify';
 import '../../styles/verify.css';
 
-const M6_ADDRESS = '0x40254d0b63a9AbdB38671dC7DC41f3BaE5B65025';
+const M6_ADDRESS = '0x3E80F8c7911240e6092D523af79B13c046bd2FdE';
 const M6_NETWORK = 'robinhood-testnet';
 const M6_SOURCE_URL = '/examples/kairos_coin.cov';
 
