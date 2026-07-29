@@ -371,7 +371,7 @@ Auto-synthesized:
 - **Actions**: \`approve\`, \`setApprovalForAll\`, \`transferFrom\`, \`mint\`
 - **Events**: \`Transfer\`, \`Approval\`, \`ApprovalForAll\`
 
-V0.9.0 limits: \`mint\` is open-access (add \`only deployer\` to gate), \`tokenURI(id)\` returns \`base_uri\` verbatim (id concat in V0.9.x), \`safeTransferFrom\` reserved but not yet emitted.`,
+V0.9.x limits: \`mint\` is open-access (add \`only deployer\` to gate), \`tokenURI(id)\` returns \`base_uri\` verbatim (id concat in V0.9.x), \`safeTransferFrom\` reserved but not yet emitted.`,
     difficulty: 'beginner',
     tags: ['tokens', 'reference'],
     estimatedReadMinutes: 4,

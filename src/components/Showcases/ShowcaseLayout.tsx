@@ -72,7 +72,7 @@ export function ShowcaseLayout({ milestone, title, network, children }: Props) {
       <main className="showcase-main">{children}</main>
 
       <footer className="showcase-footer">
-        <span>Powered by Covenant V0.9.0</span>
+        <span>Powered by Covenant V0.9.6</span>
         <span aria-hidden="true">·</span>
         <span>Built by Kairos Lab</span>
         <span aria-hidden="true">·</span>

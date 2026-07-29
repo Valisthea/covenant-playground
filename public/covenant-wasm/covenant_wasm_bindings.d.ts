@@ -125,6 +125,13 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
+    readonly check: (a: number, b: number) => any;
+    readonly compile_to_evm: (a: number, b: number) => any;
+    readonly compile_to_evm_for_target: (a: number, b: number, c: number, d: number) => any;
+    readonly compile_to_ir_text: (a: number, b: number) => any;
+    readonly diagnostic_explanations: () => any;
+    readonly init: () => void;
+    readonly version: () => [number, number];
     readonly chain_call: (a: number, b: number) => any;
     readonly chain_deploy: (a: number, b: number) => any;
     readonly chain_get_storage: (a: number, b: number, c: number, d: number) => any;
@@ -137,13 +144,6 @@ export interface InitOutput {
     readonly chain_get_contracts: () => any;
     readonly chain_init: () => void;
     readonly chain_reset: () => void;
-    readonly check: (a: number, b: number) => any;
-    readonly compile_to_evm: (a: number, b: number) => any;
-    readonly compile_to_evm_for_target: (a: number, b: number, c: number, d: number) => any;
-    readonly compile_to_ir_text: (a: number, b: number) => any;
-    readonly diagnostic_explanations: () => any;
-    readonly init: () => void;
-    readonly version: () => [number, number];
     readonly __wbindgen_externrefs: WebAssembly.Table;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
