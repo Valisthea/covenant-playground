@@ -3,12 +3,13 @@
   "private": true,
   "version": "0.8.0-rc3",
   "type": "module",
-  "description": "Browser-based Covenant playground — Monaco editor + in-browser compiler + MockChain + Sepolia deploy",
+  "description": "Browser-based Covenant playground \u2014 Monaco editor + in-browser compiler + MockChain + Sepolia deploy",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc -b --noEmit"
+    "typecheck": "tsc -b --noEmit",
+    "inventory": "node scripts/inventory-content.mjs --strict"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.6.0",

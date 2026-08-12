@@ -1,38 +1,29 @@
--- E15 — Token + Withdrawer (V0.9 composition pattern)
+-- E15: Treasury that moves an existing token (V0.9 composition pattern)
 --
--- Two contracts in one file demonstrating the canonical composition:
--- a `token` (ERC-20 auto-synthesis) + a `module` that calls into it via
--- a typed `interface` declaration. This is the V0.9 way to wire DeFi
--- protocols, treasury contracts, and any module that needs to move tokens.
+-- A file holds one construct, so the token and the module that spends it are
+-- two separate deployments. That is the composition: deploy the token, then
+-- deploy this module and point it at the token's address. The `external
+-- contract` declaration is how the module knows the shape of what it calls.
 
-token GameToken {
-    symbol: "GAME"
-    name: "Game Token"
-    decimals: 18
-    supply: 1_000_000 to deployer
-}
-
-interface IGameToken {
-    action transfer(to: address, value: amount) returns bool
-    view balance_of(who: address) returns amount
+external contract IGameToken {
+    function transfer(address, amount) returns bool
+    function balanceOf(address) view returns amount
 }
 
 module Treasury {
     field token_addr: address
     field admin: address
 
-    action initialize(token: address, who: address) {
-        token_addr = token
+    action initialize(t: address, who: address) only deployer {
+        token_addr = t
         admin = who
     }
 
-    action distribute(to: address, value: amount) only admin {
-        let iface = call_interface(token_addr, IGameToken)
-        iface.transfer(to, value)
+    action distribute(recipient: address, value: amount) only admin {
+        IGameToken.at(token_addr).transfer(recipient, value)
     }
 
-    view treasury_balance returns amount {
-        let iface = call_interface(token_addr, IGameToken)
-        iface.balance_of(self)
+    view treasury_balance(who: address) returns amount {
+        IGameToken.at(token_addr).balanceOf(who)
     }
 }

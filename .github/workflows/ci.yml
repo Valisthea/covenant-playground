@@ -1,0 +1,55 @@
+name: CI
+
+# This repository had no CI at all, while its own source claimed an
+# "inventory CI gate" enforced that every gallery example compiles. Five of
+# seventeen did not, two of them written against a keyword the language never
+# had, and all five were labelled verified. The gate exists now.
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  typecheck:
+    name: typecheck and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+
+  examples:
+    name: gallery examples match their status
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Build the compiler from source rather than pulling a release binary.
+      # The published release currently trails main, so a release-based check
+      # would validate the gallery against a compiler nobody is running, which
+      # is the same class of drift this job exists to catch.
+      - name: Check out the compiler
+        uses: actions/checkout@v4
+        with:
+          repository: Valisthea/covenant-language
+          path: .covenant-src
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: .covenant-src
+      - name: Build the compiler
+        working-directory: .covenant-src
+        run: cargo build --release --bin covenant
+
+      - name: Every example must match the status the registry claims
+        env:
+          COVENANT: ${{ github.workspace }}/.covenant-src/target/release/covenant
+        run: node scripts/inventory-content.mjs --strict
