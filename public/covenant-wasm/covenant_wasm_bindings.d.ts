@@ -22,7 +22,7 @@ export function chain_get_contracts(): any;
 
 /**
  * Block number, timestamp, contract count, account count, tx count.
- * Sized for the playground's status bar — refresh on every UI tick.
+ * Sized for the playground's status bar: refresh on every UI tick.
  */
 export function chain_get_state(): any;
 
@@ -47,7 +47,7 @@ export function chain_mine_blocks(count: bigint): void;
 
 /**
  * Alias for `chain_init`. The playground's UI uses "Reset", the
- * underlying op is identical — having both names lets the JS side
+ * underlying op is identical: having both names lets the JS side
  * pick whichever reads better at the call site.
  */
 export function chain_reset(): void;

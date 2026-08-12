@@ -5,29 +5,77 @@
   "outputDirectory": "dist",
   "installCommand": "npm install",
   "rewrites": [
-    { "source": "/share", "destination": "/index.html" },
-    { "source": "/examples", "destination": "/index.html" },
-    { "source": "/examples/:id", "destination": "/index.html" },
-    { "source": "/tour", "destination": "/index.html" },
-    { "source": "/tour/:lessonId", "destination": "/index.html" },
-    { "source": "/showcases", "destination": "/index.html" },
-    { "source": "/showcases/:id", "destination": "/index.html" },
-    { "source": "/contract", "destination": "/index.html" },
-    { "source": "/contract/:chain/:address", "destination": "/index.html" },
-    { "source": "/verify", "destination": "/index.html" }
+    {
+      "source": "/share",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/examples",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/examples/:id",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/tour",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/tour/:lessonId",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/showcases",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/showcases/:id",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/contract",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/contract/:chain/:address",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/verify",
+      "destination": "/index.html"
+    }
   ],
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        }
       ]
     },
     {
-      "source": "/covenant-wasm/(.*)",
+      "source": "/covenant-wasm/(.*-[0-9a-f]{12}\\.(?:js|wasm))",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/covenant-wasm/manifest.json",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
       ]
     }
   ]

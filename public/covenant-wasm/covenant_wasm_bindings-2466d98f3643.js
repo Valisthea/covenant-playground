@@ -50,7 +50,7 @@ export function chain_get_contracts() {
 
 /**
  * Block number, timestamp, contract count, account count, tx count.
- * Sized for the playground's status bar — refresh on every UI tick.
+ * Sized for the playground's status bar: refresh on every UI tick.
  * @returns {any}
  */
 export function chain_get_state() {
@@ -100,7 +100,7 @@ export function chain_mine_blocks(count) {
 
 /**
  * Alias for `chain_init`. The playground's UI uses "Reset", the
- * underlying op is identical — having both names lets the JS side
+ * underlying op is identical: having both names lets the JS side
  * pick whichever reads better at the call site.
  */
 export function chain_reset() {
@@ -463,7 +463,7 @@ async function __wbg_init(module_or_path) {
     }
 
     if (module_or_path === undefined) {
-        module_or_path = new URL('covenant_wasm_bindings_bg.wasm', import.meta.url);
+        module_or_path = new URL('covenant_wasm_bindings_bg-2466d98f3643.wasm', import.meta.url);
     }
     const imports = __wbg_get_imports();
 

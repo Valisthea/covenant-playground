@@ -82,7 +82,7 @@ export interface CompileResult {
 }
 
 /**
- * Sprint 22 binding shape — see `covenant-wasm-bindings/covenant_wasm_bindings.d.ts`
+ * Sprint 22 binding shape, see `covenant-wasm-bindings/covenant_wasm_bindings.d.ts`
  * for the source of truth. Mirrored here so the wrapper can be type-checked
  * without the bundle present at TS compile time.
  */
@@ -156,15 +156,38 @@ export async function ensureCompilerLoaded(): Promise<void> {
       // module whose default export is the init() function. We point it
       // at the absolute URL of the .wasm so service-worker caching and
       // Vercel rewrites both behave correctly.
-      const modulePath = '/covenant-wasm/covenant_wasm_bindings.js';
-      const wasmUrl = new URL('/covenant-wasm/covenant_wasm_bindings_bg.wasm', window.location.origin);
+      //
+      // Both filenames carry a content hash and are read from the manifest
+      // rather than hardcoded. That is what makes the immutable cache header on
+      // this directory honest: a new build is a new URL. Before, it was the
+      // same URL for a year, so replacing the file never reached a browser that
+      // had already loaded the old one, and the playground served a compiler
+      // five weeks stale without any way to push the fix out.
+      //
+      // The manifest itself is fetched with no-cache; the immutable rule covers
+      // the hashed artifacts only.
+      const manifest = (await (
+        await fetch('/covenant-wasm/manifest.json', { cache: 'no-cache' })
+      ).json()) as { js: string; wasm: string; version: string };
+
+      const modulePath = `/covenant-wasm/${manifest.js}`;
+      const wasmUrl = new URL(`/covenant-wasm/${manifest.wasm}`, window.location.origin);
       const module = (await import(/* @vite-ignore */ modulePath)) as WasmBinding;
       await module.default(wasmUrl);
       binding = module;
       initialized = true;
       USE_STUB_COMPILER = false;
+
+      const reported = binding.version();
+      if (reported !== manifest.version) {
+        // eslint-disable-next-line no-console
+        console.warn(
+          `[covenant] manifest says ${manifest.version} but the binary reports ${reported}; ` +
+            'the wasm directory was edited by hand',
+        );
+      }
       // eslint-disable-next-line no-console
-      console.info('[covenant] compiler initialized:', binding.version());
+      console.info('[covenant] compiler initialized:', reported);
     } catch (err) {
       // eslint-disable-next-line no-console
       console.warn(
@@ -193,7 +216,7 @@ export async function compile(source: string): Promise<CompileResult> {
 }
 
 /**
- * Frontend-only check. Returns just diagnostics + timing — no artifact.
+ * Frontend-only check. Returns just diagnostics + timing, no artifact.
  * Cheap enough to call on every Monaco keystroke if you want; use
  * `compile()` when you need bytecode.
  */
@@ -234,7 +257,7 @@ export async function compileToIr(source: string): Promise<{ ok: boolean; ir: st
 
 /**
  * Direct access to the underlying binding for the chain runtime
- * (mockchain.ts) — avoids each module having to dynamically import
+ * (mockchain.ts): avoids each module having to dynamically import
  * the same .wasm twice. Returns `null` if init failed and we're in
  * stub mode; callers should treat that as "chain ops unavailable".
  */
@@ -329,7 +352,7 @@ function adaptDiagnostic(d: WasmDiagnostic): Diagnostic {
   const length = Math.max(1, d.span_end - d.span_start);
   return {
     severity: d.level,
-    message: d.message + (d.help ? ` — ${d.help}` : ''),
+    message: d.message + (d.help ? `: ${d.help}` : ''),
     line: d.line,
     column: d.column,
     endLine: d.end_line,
@@ -345,8 +368,8 @@ function adaptDiagnostic(d: WasmDiagnostic): Diagnostic {
 // Stub compiler
 // ---------------------------------------------------------------------------
 //
-// Returns realistic-looking results so that every downstream UI path — tabs,
-// markers, timing, success/failure styling — can be exercised with zero
+// Returns realistic-looking results so that every downstream UI path, tabs,
+// markers, timing, success/failure styling, can be exercised with zero
 // external dependencies. It's heuristic-based: we look for obvious shapes
 // (`token`, `record`, missing braces) and synthesize diagnostics + a fake
 // metadata blob. The bytes we report as "wasm" are a valid-ish WASM module
@@ -410,7 +433,7 @@ function runStubCompile(source: string, started: number): CompileResult {
 function heuristicDiagnose(source: string): Diagnostic[] {
   const diags: Diagnostic[] = [];
 
-  // Bracket balance — a common early error, cheap to detect.
+  // Bracket balance, a common early error, cheap to detect.
   let depth = 0;
   let lastOpen = 0;
   for (let i = 0; i < source.length; i++) {
@@ -424,7 +447,7 @@ function heuristicDiagnose(source: string): Diagnostic[] {
     const { line, column } = offsetToLineCol(source, lastOpen);
     diags.push({
       severity: 'error',
-      message: 'Unmatched `{` — expected a closing `}` at end of declaration.',
+      message: 'Unmatched `{`: expected a closing `}` at end of declaration.',
       line,
       column,
       length: 1,
@@ -436,7 +459,7 @@ function heuristicDiagnose(source: string): Diagnostic[] {
   if (depth < 0) {
     diags.push({
       severity: 'error',
-      message: 'Stray `}` — no matching opening brace.',
+      message: 'Stray `}`: no matching opening brace.',
       line: 1,
       column: 1,
       length: 1,
@@ -448,14 +471,14 @@ function heuristicDiagnose(source: string): Diagnostic[] {
   if (source.trim().length === 0) {
     diags.push({
       severity: 'info',
-      message: 'Empty source — nothing to compile.',
+      message: 'Empty source, nothing to compile.',
       line: 1,
       column: 1,
       code: 'I0001',
     });
   }
 
-  // "Coming soon" warning for any @precompute use — reflects W701 in real compiler.
+  // "Coming soon" warning for any @precompute use, reflects W701 in real compiler.
   const preIdx = source.indexOf('@precompute');
   if (preIdx >= 0) {
     const { line, column } = offsetToLineCol(source, preIdx);
@@ -519,7 +542,7 @@ function synthesizeExports(kind: string, source: string): string[] {
   if (kind === 'vault') return [...base, 'deposit', 'withdraw', 'balance'];
   if (kind === 'ceremony')
     return [...base, 'setup', 'contribute', 'finalize', 'destroy'];
-  // Record — scan for action/view declarations
+  // Record, scan for action/view declarations
   const actions = Array.from(
     source.matchAll(/\b(?:action|view|reveal)\s+([a-z_][\w]*)/g),
   ).map((m) => m[1]);
@@ -544,7 +567,7 @@ function synthesizeIr(kind: string, name: string, source: string): string {
     source.matchAll(/\b(?:action|view|reveal)\s+([a-z_][\w]*)/g),
   ).map((m) => m[1]);
   const lines = [
-    `// Covenant IR — synthesized stub output`,
+    `// Covenant IR, synthesized stub output`,
     `// kind: ${kind}`,
     `// module: ${name}`,
     ``,
@@ -563,7 +586,7 @@ function synthesizeIr(kind: string, name: string, source: string): string {
 // bindings now ship line/column + a pre-formatted `code` string in the
 // JsDiagnostic shape. The `adaptDiagnostic` helper above does the
 // translation in one step. The byte-offset-to-line-col helper below
-// stays — `synthesizeSourceMap` and the heuristic stub still use it.
+// stays, `synthesizeSourceMap` and the heuristic stub still use it.
 
 /**
  * Utility: byte offset -> { line, column } (both 1-indexed).

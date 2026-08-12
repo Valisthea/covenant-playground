@@ -1,0 +1,8 @@
+{
+  "_comment": "Written by scripts/install-wasm.mjs. Filenames carry a content hash so the immutable cache header is safe. Do not edit by hand: the loader reads this, and a hand-edited name will not match the bytes.",
+  "version": "0.9.8",
+  "js": "covenant_wasm_bindings-2466d98f3643.js",
+  "wasm": "covenant_wasm_bindings_bg-2466d98f3643.wasm",
+  "sha256": "2466d98f3643123c9cde073ac7794cc08744c2eb101d1e6471109e30813e030b",
+  "builtFrom": "a99fc4215e45c4c3e225407630c3ce200c71c5b2"
+}
